@@ -38,7 +38,6 @@
     .price-20_50 { background: #ede9fe; color: #5b21b6; }
     .price-50_100 { background: #fef3c7; color: #92400e; }
     .price-100_plus { background: #fee2e2; color: #991b1b; }
-    [v-cloak] { display: none; }
     input:focus, textarea:focus, select:focus { outline: 2px solid #e86c3a; outline-offset: 0; }
     .btn-primary { background: #e86c3a; color: white; }
     .btn-primary:hover { background: #c85520; }
@@ -46,7 +45,7 @@
   </style>
 </head>
 <body>
-<div id="app" v-cloak>
+<div id="app">
 
   <!-- ========== LOGIN SCREEN ========== -->
   <div v-if="!loggedIn" class="min-h-screen flex flex-col items-center justify-center px-6 py-12">
