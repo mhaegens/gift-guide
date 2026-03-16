@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Great Gift Guide — POC</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#fffbeb',
+              100: '#fef3c7',
+              200: '#fde68a',
+              300: '#fcd34d',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+              800: '#92400e',
+              900: '#78350f',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #fffbeb; }
+    .screen { display: none; }
+    .screen.active { display: flex; flex-direction: column; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 40; }
+    .has-bottom-nav { padding-bottom: 72px; }
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(0,0,0,0.4);
+      align-items: flex-end;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      width: 100%; background: white;
+      border-radius: 1rem 1rem 0 0;
+      padding: 1.5rem;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .price-chip { cursor: pointer; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; border: 1.5px solid #d6d3d1; color: #57534e; transition: all 0.15s; min-height: 36px; display: inline-flex; align-items: center; }
+    .price-chip.active { background: #d97706; border-color: #d97706; color: white; }
+    .price-chip:hover:not(.active) { border-color: #f59e0b; color: #b45309; }
+    .item-card { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; transition: box-shadow 0.15s; }
+    .item-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .item-detail { display: none; border-top: 1px solid #f5f5f4; padding: 0.75rem 1rem 1rem; background: #fafaf9; }
+    .item-detail.open { display: block; }
+    .avatar { width: 3rem; height: 3rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700; color: white; flex-shrink: 0; }
+    .og-img { width: 100%; height: 140px; object-fit: cover; background: #fef3c7; }
+    .og-placeholder { width: 100%; height: 140px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem; }
+    .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.5rem; font-weight: 600; padding: 0 1rem; cursor: pointer; transition: opacity 0.15s; font-size: 0.9rem; }
+    .btn:hover { opacity: 0.88; }
+    .btn-amber { background: #d97706; color: white; }
+    .btn-outline { background: transparent; border: 1.5px solid #d6d3d1; color: #57534e; }
+    .btn-ghost { background: transparent; color: #78716c; }
+    .btn-danger { background: #fee2e2; color: #dc2626; }
+    .form-input { width: 100%; border: 1.5px solid #d6d3d1; border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.95rem; min-height: 44px; outline: none; transition: border-color 0.15s; }
+    .form-input:focus { border-color: #f59e0b; }
+    .form-label { font-size: 0.85rem; font-weight: 600; color: #57534e; margin-bottom: 0.25rem; display: block; }
+    .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-height: 56px; justify-content: center; cursor: pointer; transition: color 0.15s; font-size: 0.7rem; color: #a8a29e; }
+    .nav-btn.active { color: #d97706; }
+    .nav-btn svg { width: 22px; height: 22px; }
+    .badge { display: inline-flex; align-items: center; border-radius: 9999px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
+    .badge-amber { background: #fef3c7; color: #92400e; }
+    .badge-emerald { background: #d1fae5; color: #065f46; }
+    .badge-stone { background: #f5f5f4; color: #78716c; }
+    .badge-rose { background: #ffe4e6; color: #9f1239; }
+    .toast { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 100; background: #1c1917; color: white; padding: 0.625rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+    .section-header { font-size: 1rem; font-weight: 700; color: #292524; margin: 1rem 0 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .toggle-switch { position: relative; width: 40px; height: 22px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: #d6d3d1; border-radius: 9999px; cursor: pointer; transition: background 0.2s; }
+    .toggle-slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: white; border-radius: 9999px; transition: transform 0.2s; }
+    input:checked + .toggle-slider { background: #d97706; }
+    input:checked + .toggle-slider:before { transform: translateX(18px); }
+  </style>
+</head>
+<body class="min-h-screen font-sans">
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div id="screen-login" class="screen active min-h-screen items-center justify-center p-6">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-8">
+        <div class="text-5xl mb-3">🎁</div>
+        <h1 class="text-2xl font-bold text-stone-800">The Great Gift Guide</h1>
+        <p class="text-stone-500 text-sm mt-1">Private family wishlists</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+        <div>
+          <label class="form-label">Username</label>
+          <input id="login-username" type="text" class="form-input" placeholder="your username" />
+        </div>
+        <div>
+          <label class="form-label">Password</label>
+          <input id="login-password" type="password" class="form-input" placeholder="••••••••" />
+        </div>
+        <button onclick="doLogin()" class="btn btn-amber w-full mt-2">Log in</button>
+        <p class="text-center text-xs text-stone-400 mt-2">Forgot your password? Ask Michiel.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HOME SCREEN ===== -->
+  <div id="screen-home" class="screen has-bottom-nav min-h-screen">
+    <div class="px-4 pt-6 pb-2">
+      <div class="flex items-center justify-between mb-1">
+        <div>
+          <h1 class="text-xl font-bold text-stone-800">The Great Gift Guide</h1>
+          <p id="home-greeting" class="text-sm text-stone-500"></p>
+        </div>
+        <div class="text-3xl">🎁</div>
+      </div>
+    </div>
+    <div id="home-members-grid" class="px-4 pb-4 grid grid-cols-2 gap-3"></div>
+  </div>
+
+  <!-- ===== WISHLIST SCREEN (other person's list) ===== -->
+  <div id="screen-wishlist" class="screen has-bottom-nav min-h-screen">
+    <div class="bg-white shadow-sm px-4 pt-5 pb-3 sticky top-0 z-30">
+      <div class="flex items-center gap-3 mb-3">
+        <button onclick="navigate('home')" class="btn btn-ghost p-2 -ml-2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5"><path d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="flex items-center gap-2 flex-1">
+          <div id="wishlist-avatar" class="avatar" style="width:2.25rem;height:2.25rem;font-size:1rem;"></div>
+          <div>
+            <h2 id="wishlist-name" class="font-bold text-stone-800 leading-tight"></h2>
+            <p id="wishlist-count" class="text-xs text-stone-500"></p>
+          </div>
+        </div>
+      </div>
+      <div id="wishlist-filters" class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"></div>
+    </div>
+    <div id="wishlist-items" class="px-4 pt-3 space-y-3"></div>
+  </div>
+
+  <!-- ===== MY LIST SCREEN ===== -->
+  <div id="screen-mylist" class="screen has-bottom-nav min-h-screen">
+    <div class="bg-white shadow-sm px-4 pt-5 pb-3 sticky top-0 z-30">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="font-bold text-lg text-stone-800">My Wishlist</h2>
+          <p id="mylist-count" class="text-xs text-stone-500"></p>
+        </div>
+      </div>
+      <div id="mylist-filters" class="flex gap-2 overflow-x-auto pb-1"></div>
+    </div>
+    <div id="mylist-items" class="px-4 pt-3 space-y-3 pb-4"></div>
+    <!-- FAB -->
+    <button onclick="openItemModal(null)" class="fixed bottom-20 right-4 w-14 h-14 bg-amber-500 rounded-full shadow-lg flex items-center justify-center text-white text-2xl z-30 hover:bg-amber-600 transition-colors" aria-label="Add gift">+</button>
+  </div>
+
+  <!-- ===== MY PURCHASES SCREEN ===== -->
+  <div id="screen-purchases" class="screen has-bottom-nav min-h-screen">
+    <div class="px-4 pt-6 pb-2">
+      <h2 class="font-bold text-xl text-stone-800">My Purchases</h2>
+      <p class="text-sm text-stone-500">Items you've committed to buying</p>
+    </div>
+    <div id="purchases-content" class="px-4 space-y-4 pb-4"></div>
+  </div>
+
+  <!-- ===== PROFILE SCREEN ===== -->
+  <div id="screen-profile" class="screen has-bottom-nav min-h-screen">
+    <div class="px-4 pt-6 pb-4 space-y-5">
+      <div class="flex items-center gap-3 mb-2">
+        <div id="profile-avatar" class="avatar text-xl" style="width:3.5rem;height:3.5rem;"></div>
+        <div>
+          <h2 id="profile-name-display" class="font-bold text-lg text-stone-800"></h2>
+          <p id="profile-username-display" class="text-sm text-stone-500"></p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm space-y-3">
+        <h3 class="font-semibold text-stone-700">Display name</h3>
+        <div>
+          <label class="form-label">Name shown to family</label>
+          <input id="profile-name-input" type="text" class="form-input" />
+        </div>
+        <button onclick="saveProfileName()" class="btn btn-amber w-full">Save name</button>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm space-y-3">
+        <h3 class="font-semibold text-stone-700">Change password</h3>
+        <div><label class="form-label">Current password</label><input type="password" class="form-input" placeholder="••••••••" /></div>
+        <div><label class="form-label">New password</label><input type="password" class="form-input" placeholder="••••••••" /></div>
+        <div><label class="form-label">Confirm new password</label><input type="password" class="form-input" placeholder="••••••••" /></div>
+        <button onclick="showToast('Password changed (demo only)')" class="btn btn-amber w-full">Change password</button>
+      </div>
+
+      <div id="profile-admin-section" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-lg">🔧</span>
+          <h3 class="font-semibold text-amber-800">Admin</h3>
+          <span class="badge badge-amber">Admin</span>
+        </div>
+        <p class="text-sm text-amber-700 mb-3">Manage family accounts, reset passwords, and assign admin roles.</p>
+        <button onclick="navigate('admin')" class="btn btn-amber w-full">Manage users →</button>
+      </div>
+
+      <button onclick="doLogout()" class="btn btn-danger w-full">Log out</button>
+    </div>
+  </div>
+
+  <!-- ===== ADMIN PANEL SCREEN ===== -->
+  <div id="screen-admin" class="screen min-h-screen">
+    <div class="bg-white shadow-sm px-4 pt-5 pb-3 sticky top-0 z-30">
+      <div class="flex items-center gap-3">
+        <button onclick="navigate('profile')" class="btn btn-ghost p-2 -ml-2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5"><path d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <h2 class="font-bold text-lg text-stone-800">Admin Panel</h2>
+      </div>
+    </div>
+    <div class="px-4 pt-4 pb-6">
+      <div class="flex justify-between items-center mb-4">
+        <p class="text-sm text-stone-500">Manage family accounts</p>
+        <button onclick="openAddUserModal()" class="btn btn-amber px-4">+ Add user</button>
+      </div>
+      <div id="admin-user-list" class="space-y-3"></div>
+    </div>
+  </div>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav id="bottom-nav" class="bottom-nav bg-white border-t border-stone-100 hidden">
+    <div class="flex">
+      <button class="nav-btn" id="nav-home" onclick="navigate('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+        Home
+      </button>
+      <button class="nav-btn" id="nav-mylist" onclick="navigate('mylist')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
+        My List
+      </button>
+      <button class="nav-btn" id="nav-purchases" onclick="navigate('purchases')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        My Purchases
+      </button>
+      <button class="nav-btn" id="nav-profile" onclick="navigate('profile')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Profile
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===== ADD/EDIT ITEM MODAL ===== -->
+  <div id="modal-item" class="modal-overlay" onclick="handleModalBackdropClick(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 id="modal-item-title" class="font-bold text-lg text-stone-800">Add gift</h3>
+        <button onclick="closeItemModal()" class="btn btn-ghost p-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="form-label">Title <span class="text-red-500">*</span></label>
+          <input id="item-title-input" type="text" class="form-input" placeholder="e.g. The Pragmatic Programmer" />
+        </div>
+
+        <div>
+          <label class="form-label">Product URL</label>
+          <div class="flex gap-2">
+            <input id="item-url-input" type="url" class="form-input flex-1" placeholder="https://..." />
+            <button onclick="mockFetchOG()" id="fetch-og-btn" class="btn btn-outline whitespace-nowrap px-3">Fetch details</button>
+          </div>
+          <div id="og-preview" class="hidden mt-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <div class="flex gap-3 items-center">
+              <img id="og-preview-img" src="" alt="" class="w-16 h-16 rounded object-cover bg-amber-100 flex-shrink-0" />
+              <div>
+                <p class="text-xs text-stone-500 mb-1">Suggested title:</p>
+                <p id="og-preview-title" class="text-sm font-semibold text-stone-800"></p>
+                <button onclick="applyOGTitle()" class="text-xs text-amber-700 font-semibold mt-1 hover:underline">Use this title</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label">Price range</label>
+          <div id="price-selector" class="flex flex-wrap gap-2 mt-1">
+            <button class="price-chip" data-price="free" onclick="selectPrice('free')">Free</button>
+            <button class="price-chip" data-price="0_20" onclick="selectPrice('0_20')">€0–20</button>
+            <button class="price-chip" data-price="20_50" onclick="selectPrice('20_50')">€20–50</button>
+            <button class="price-chip" data-price="50_100" onclick="selectPrice('50_100')">€50–100</button>
+            <button class="price-chip" data-price="100_plus" onclick="selectPrice('100_plus')">€100+</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label">Description</label>
+          <textarea id="item-desc-input" class="form-input" rows="2" placeholder="Optional details about the item…" style="min-height:auto;resize:vertical;"></textarea>
+        </div>
+
+        <div>
+          <label class="form-label">Notes for buyer</label>
+          <textarea id="item-notes-input" class="form-input" rows="2" placeholder="e.g. Size M, not the Pro version, blue colourway…" style="min-height:auto;resize:vertical;"></textarea>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button onclick="closeItemModal()" class="btn btn-outline flex-1">Cancel</button>
+          <button onclick="saveItem()" class="btn btn-amber flex-1">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ADD USER MODAL ===== -->
+  <div id="modal-adduser" class="modal-overlay" onclick="if(event.target===this)closeAddUserModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg text-stone-800">Add user</h3>
+        <button onclick="closeAddUserModal()" class="btn btn-ghost p-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div><label class="form-label">Display name</label><input id="new-user-name" type="text" class="form-input" placeholder="e.g. Grandma Elsa" /></div>
+        <div><label class="form-label">Username</label><input id="new-user-username" type="text" class="form-input" placeholder="e.g. grandma_elsa" /></div>
+        <div><label class="form-label">Temporary password</label><input id="new-user-pass" type="text" class="form-input" placeholder="Share via WhatsApp" /></div>
+        <div class="flex gap-3 pt-2">
+          <button onclick="closeAddUserModal()" class="btn btn-outline flex-1">Cancel</button>
+          <button onclick="createUser()" class="btn btn-amber flex-1">Create account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RESET PASSWORD MODAL ===== -->
+  <div id="modal-resetpw" class="modal-overlay" onclick="if(event.target===this)closeResetPwModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-bold text-lg text-stone-800">Reset password</h3>
+        <button onclick="closeResetPwModal()" class="btn btn-ghost p-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <p id="resetpw-for" class="text-sm text-stone-500 mb-4"></p>
+      <div class="space-y-4">
+        <div><label class="form-label">New temporary password</label><input id="resetpw-value" type="text" class="form-input" placeholder="Share via WhatsApp" /></div>
+        <div class="flex gap-3 pt-2">
+          <button onclick="closeResetPwModal()" class="btn btn-outline flex-1">Cancel</button>
+          <button onclick="doResetPw()" class="btn btn-amber flex-1">Reset password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DELETE CONFIRM MODAL ===== -->
+  <div id="modal-delete" class="modal-overlay" onclick="if(event.target===this)closeDeleteModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="text-center py-2">
+        <div class="text-4xl mb-3">🗑️</div>
+        <h3 class="font-bold text-lg text-stone-800 mb-1">Remove item?</h3>
+        <p id="delete-item-name" class="text-stone-500 text-sm mb-5"></p>
+        <div class="flex gap-3">
+          <button onclick="closeDeleteModal()" class="btn btn-outline flex-1">Keep it</button>
+          <button onclick="confirmDelete()" class="btn btn-danger flex-1">Remove</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ============================================================
+// MOCK DATA
+// ============================================================
+
+const AVATAR_COLORS = ['#d97706','#e11d48','#7c3aed','#0d9488','#0284c7','#16a34a'];
+
+const users = [
+  { id: 1, display_name: 'Michiel', username: 'michiel', is_admin: true,  is_active: true  },
+  { id: 2, display_name: 'Sarah',   username: 'sarah',   is_admin: false, is_active: true  },
+  { id: 3, display_name: 'Emma',    username: 'emma',    is_admin: false, is_active: true  },
+  { id: 4, display_name: 'Thomas',  username: 'thomas',  is_admin: false, is_active: false },
+];
+
+let items = [
+  // Michiel's items
+  { id: 1,  owner_id: 1, title: 'Lego Technic 42154 — Ford GT',
+    description: 'The classic Ford GT set with working suspension and detailed engine. Perfect for display.',
+    url: 'https://www.lego.com/en-gb/product/ford-gt-42154',
+    og_image_url: 'https://images.brickset.com/sets/images/42154-1.jpg',
+    buyer_notes: 'Get it from the official Lego store — not a third-party reseller.',
+    price_category: '50_100', created_at: '2025-12-01' },
+  { id: 2,  owner_id: 1, title: 'Merino Wool Socks (3-pack)',
+    description: null,
+    url: null, og_image_url: null,
+    buyer_notes: 'Size 43, any colour except white.',
+    price_category: '0_20', created_at: '2025-11-20' },
+  { id: 3,  owner_id: 1, title: 'The Pragmatic Programmer',
+    description: 'A software engineering classic by Andrew Hunt and David Thomas. 20th Anniversary edition.',
+    url: 'https://pragprog.com/titles/tpp20/',
+    og_image_url: 'https://pragprog.com/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/tpp20_hu_hu_500.jpg',
+    buyer_notes: 'Paperback edition please.',
+    price_category: '20_50', created_at: '2025-11-05' },
+  { id: 4,  owner_id: 1, title: 'Espresso Tamper — Barista Hustle',
+    description: 'Precision calibrated tamper for consistent espresso extraction.',
+    url: null, og_image_url: null,
+    buyer_notes: '58.5mm base diameter. The matte black one.',
+    price_category: '100_plus', created_at: '2025-10-15' },
+
+  // Sarah's items
+  { id: 5,  owner_id: 2, title: 'Yoga Mat — Manduka PRO',
+    description: 'Professional yoga mat, 6mm thick, non-slip, lifetime guarantee.',
+    url: 'https://www.manduka.com/products/pro-yoga-mat-6mm',
+    og_image_url: 'https://cdn.shopify.com/s/files/1/0087/6398/3845/products/12010112-BLACK-1_1200x.jpg',
+    buyer_notes: null,
+    price_category: '50_100', created_at: '2026-01-10' },
+  { id: 6,  owner_id: 2, title: 'Kindle Paperwhite (16GB)',
+    description: 'Waterproof, 300ppi glare-free display. Perfect for reading.',
+    url: 'https://www.amazon.co.uk/dp/B09TMZKQR3',
+    og_image_url: 'https://m.media-amazon.com/images/I/61Ww4abGclL._AC_SL1000_.jpg',
+    buyer_notes: 'Black, 16GB. Not the Signature edition.',
+    price_category: '100_plus', created_at: '2025-12-20' },
+  { id: 7,  owner_id: 2, title: 'Scented Candle Set — Jo Malone',
+    description: 'A selection of three Jo Malone candles.',
+    url: null, og_image_url: null,
+    buyer_notes: 'Lime Basil & Mandarin, or Peony & Blush Suede.',
+    price_category: '0_20', created_at: '2025-12-15' },
+  { id: 8,  owner_id: 2, title: 'Nike React Infinity Run Shoes',
+    description: 'Lightweight running shoes with React foam cushioning.',
+    url: 'https://www.nike.com/gb/t/react-infinity-run-flyknit',
+    og_image_url: 'https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/i1-665455ed-6024-4e31-b1a7-68ceb5f59a9b/react-infinity-run-flyknit-3-road-running-shoes-bmdgWT.png',
+    buyer_notes: 'UK size 6. Check the size guide!',
+    price_category: '50_100', created_at: '2025-11-30' },
+  { id: 9,  owner_id: 2, title: 'Cookbook — Ottolenghi Simple',
+    description: 'A brilliant cookbook with simple, flavour-packed recipes by Yotam Ottolenghi.',
+    url: 'https://ottolenghi.co.uk/products/ottolenghi-simple-book',
+    og_image_url: 'https://ottolenghi.co.uk/cdn/shop/files/SIMPLE_COVER.jpg',
+    buyer_notes: null,
+    price_category: '20_50', created_at: '2025-11-01' },
+
+  // Emma's items
+  { id: 10, owner_id: 3, title: 'Watercolour Paint Set — Winsor & Newton',
+    description: '24-colour professional watercolour set. Excellent pigment quality.',
+    url: null,
+    og_image_url: 'https://www.winsornewton.com/sites/default/files/styles/catalog_zoom/public/product_assets/images/0390148-1.jpg',
+    buyer_notes: null,
+    price_category: '20_50', created_at: '2026-01-05' },
+  { id: 11, owner_id: 3, title: 'AirPods Pro (2nd gen)',
+    description: 'Active noise cancellation, spatial audio, USB-C case.',
+    url: 'https://www.apple.com/airpods-pro/',
+    og_image_url: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQLD3?wid=1200&hei=630&fmt=jpeg&qlt=95',
+    buyer_notes: null,
+    price_category: '100_plus', created_at: '2025-12-10' },
+  { id: 12, owner_id: 3, title: 'Terracotta Plant Pot Set (3×)',
+    description: 'Small, medium, and large terracotta pots with drainage holes.',
+    url: null, og_image_url: null,
+    buyer_notes: null,
+    price_category: 'free', created_at: '2025-11-15' },
+
+  // Thomas's items (inactive user)
+  { id: 13, owner_id: 4, title: 'Board Game: Wingspan',
+    description: 'Award-winning bird-themed strategy game for 1–5 players.',
+    url: 'https://stonemaiergames.com/games/wingspan/',
+    og_image_url: 'https://stonemaiergames.com/wp-content/uploads/2019/02/3D-Wingspan-768x768.jpg',
+    buyer_notes: null,
+    price_category: '20_50', created_at: '2025-10-01' },
+  { id: 14, owner_id: 4, title: 'Monthly Coffee Subscription',
+    description: '3-month specialty coffee subscription from Has Bean.',
+    url: null, og_image_url: null,
+    buyer_notes: 'Espresso grind.',
+    price_category: '50_100', created_at: '2025-09-20' },
+];
+
+// Initial claims: Michiel has claimed item 6 (Sarah's Kindle) and item 13 (Thomas's Wingspan)
+let claims = [
+  { id: 1, item_id: 6,  claimer_id: 1, claimed_at: '2025-12-25' },
+  { id: 2, item_id: 11, claimer_id: 2, claimed_at: '2026-01-02' }, // Sarah claimed Emma's AirPods
+  { id: 3, item_id: 7,  claimer_id: 3, claimed_at: '2025-12-18' }, // Emma claimed Sarah's Candles
+  { id: 4, item_id: 13, claimer_id: 1, claimed_at: '2025-12-24' },
+];
+
+// ============================================================
+// STATE
+// ============================================================
+
+const state = {
+  currentUser: null,
+  currentView: 'login',
+  currentWishlistUserId: null,
+  mylistPriceFilter: 'all',
+  wishlistPriceFilter: 'all',
+  editingItemId: null,
+  selectedPrice: '0_20',
+  ogFetchTimeout: null,
+  deletingItemId: null,
+  resetPwUserId: null,
+};
+
+// ============================================================
+// UTILITIES
+// ============================================================
+
+function getUser(id) { return users.find(u => u.id === id); }
+function getUserItems(userId) { return items.filter(i => i.owner_id === userId); }
+function getClaim(itemId) { return claims.find(c => c.item_id === itemId) || null; }
+
+function avatarColor(userId) {
+  return AVATAR_COLORS[(userId - 1) % AVATAR_COLORS.length];
+}
+
+function avatarInitial(name) {
+  return name ? name[0].toUpperCase() : '?';
+}
+
+function priceLabel(cat) {
+  const map = { free: 'Free', '0_20': '€0–20', '20_50': '€20–50', '50_100': '€50–100', '100_plus': '€100+' };
+  return map[cat] || cat;
+}
+
+function showToast(msg, duration = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function setActive(el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+function updateNavActive(view) {
+  const navViews = ['home','mylist','purchases','profile'];
+  navViews.forEach(v => {
+    const btn = document.getElementById('nav-' + v);
+    if (btn) btn.classList.toggle('active', v === view);
+  });
+}
+
+function showNav(show) {
+  document.getElementById('bottom-nav').classList.toggle('hidden', !show);
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+
+function navigate(view, params = {}) {
+  state.currentView = view;
+
+  setActive(null);
+
+  if (view === 'login') {
+    showNav(false);
+    setActive(document.getElementById('screen-login'));
+    return;
+  }
+
+  if (view === 'admin') {
+    showNav(false);
+    setActive(document.getElementById('screen-admin'));
+    renderAdmin();
+    return;
+  }
+
+  const mainViews = ['home','mylist','purchases','profile'];
+  if (mainViews.includes(view)) {
+    showNav(true);
+    updateNavActive(view);
+    setActive(document.getElementById('screen-' + view));
+    if (view === 'home') renderHome();
+    if (view === 'mylist') renderMyList();
+    if (view === 'purchases') renderPurchases();
+    if (view === 'profile') renderProfile();
+    return;
+  }
+
+  if (view === 'wishlist') {
+    // If navigating to own list, redirect to mylist tab
+    if (params.userId === state.currentUser.id) {
+      navigate('mylist');
+      return;
+    }
+    state.currentWishlistUserId = params.userId;
+    state.wishlistPriceFilter = 'all';
+    showNav(true);
+    updateNavActive('home');
+    setActive(document.getElementById('screen-wishlist'));
+    renderWishlist();
+    return;
+  }
+}
+
+// ============================================================
+// LOGIN / LOGOUT
+// ============================================================
+
+function doLogin() {
+  // Mock: any credentials → log in as Michiel
+  state.currentUser = users.find(u => u.id === 1);
+  navigate('home');
+}
+
+function doLogout() {
+  state.currentUser = null;
+  navigate('login');
+}
+
+// ============================================================
+// HOME SCREEN
+// ============================================================
+
+function renderHome() {
+  document.getElementById('home-greeting').textContent = `Hello, ${state.currentUser.display_name}! 👋`;
+
+  const grid = document.getElementById('home-members-grid');
+  grid.innerHTML = '';
+
+  users.forEach(u => {
+    const itemCount = getUserItems(u.id).length;
+    const isSelf = u.id === state.currentUser.id;
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-2xl shadow-sm p-4 flex flex-col items-center gap-2 cursor-pointer hover:shadow-md transition-shadow';
+    card.onclick = () => {
+      if (isSelf) navigate('mylist');
+      else navigate('wishlist', { userId: u.id });
+    };
+
+    const color = avatarColor(u.id);
+    card.innerHTML = `
+      <div class="avatar text-xl mb-1" style="background:${color};width:3.5rem;height:3.5rem;">${avatarInitial(u.display_name)}</div>
+      <div class="text-center">
+        <p class="font-semibold text-stone-800 text-sm leading-tight">${u.display_name}${isSelf ? ' <span class="text-amber-600">(you)</span>' : ''}</p>
+        ${u.is_admin ? `<span class="badge badge-amber text-xs mt-0.5">Admin</span>` : ''}
+        ${!u.is_active ? `<span class="badge badge-stone text-xs mt-0.5">Inactive</span>` : ''}
+        <p class="text-xs text-stone-400 mt-1">${itemCount} item${itemCount !== 1 ? 's' : ''}</p>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ============================================================
+// WISHLIST SCREEN (other person's list)
+// ============================================================
+
+function renderWishlist() {
+  const user = getUser(state.currentWishlistUserId);
+  if (!user) return;
+
+  const userItems = getUserItems(user.id);
+  const filtered = filterItems(userItems, state.wishlistPriceFilter);
+
+  // Header
+  const avatarEl = document.getElementById('wishlist-avatar');
+  avatarEl.style.background = avatarColor(user.id);
+  avatarEl.textContent = avatarInitial(user.display_name);
+  document.getElementById('wishlist-name').textContent = user.display_name + `'s Wishlist`;
+  document.getElementById('wishlist-count').textContent = `${userItems.length} item${userItems.length !== 1 ? 's' : ''}`;
+
+  // Filters
+  renderFilterChips('wishlist-filters', state.wishlistPriceFilter, f => {
+    state.wishlistPriceFilter = f;
+    renderWishlist();
+  });
+
+  // Items
+  const container = document.getElementById('wishlist-items');
+  container.innerHTML = '';
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="text-center py-12 text-stone-400"><div class="text-4xl mb-2">🎁</div><p class="font-medium">No items in this price range</p></div>`;
+    return;
+  }
+
+  filtered.forEach(item => {
+    container.appendChild(buildOtherItemCard(item));
+  });
+}
+
+function buildOtherItemCard(item) {
+  const claim = getClaim(item.id);
+  const isClaimedByMe = claim && claim.claimer_id === state.currentUser.id;
+  const isClaimedByOther = claim && !isClaimedByMe;
+
+  const card = document.createElement('div');
+  card.className = 'item-card';
+  card.id = `card-${item.id}`;
+
+  let claimUI = '';
+  if (isClaimedByMe) {
+    claimUI = `
+      <div class="flex items-center gap-2 mt-3 p-2 bg-emerald-50 rounded-lg">
+        <span class="text-sm">✅</span>
+        <span class="text-sm font-semibold text-emerald-700 flex-1">You're buying this</span>
+        <button onclick="unclaimItem(${item.id})" class="text-xs text-stone-500 hover:text-red-500 font-medium transition-colors">Unclaim</button>
+      </div>
+    `;
+  } else if (isClaimedByOther) {
+    claimUI = `
+      <div class="flex items-center gap-2 mt-3 p-2 bg-stone-50 rounded-lg">
+        <span class="text-sm text-stone-400">🔒</span>
+        <span class="text-sm text-stone-400 font-medium">Already claimed</span>
+      </div>
+    `;
+  } else {
+    claimUI = `
+      <button onclick="claimItem(${item.id})" class="btn btn-amber w-full mt-3">Buy this 🛒</button>
+    `;
+  }
+
+  const imageHTML = item.og_image_url
+    ? `<img src="${item.og_image_url}" alt="" class="og-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="og-placeholder" style="display:none;">🎁</div>`
+    : `<div class="og-placeholder">🎁</div>`;
+
+  card.innerHTML = `
+    ${imageHTML}
+    <div class="p-3" onclick="toggleItemExpand(${item.id})">
+      <div class="flex items-start justify-between gap-2">
+        <p class="font-semibold text-stone-800 text-sm leading-snug flex-1">${item.title}</p>
+        <span class="badge badge-amber flex-shrink-0">${priceLabel(item.price_category)}</span>
+      </div>
+      ${item.buyer_notes ? `<p class="text-xs text-stone-500 italic mt-1 line-clamp-1">${item.buyer_notes}</p>` : ''}
+      ${claimUI}
+    </div>
+    <div id="detail-${item.id}" class="item-detail">
+      ${item.description ? `<p class="text-sm text-stone-600 mb-2">${item.description}</p>` : ''}
+      ${item.url ? `<a href="${item.url}" target="_blank" rel="noopener" class="text-sm text-amber-700 font-semibold hover:underline">Open link →</a>` : ''}
+      ${item.buyer_notes ? `<div class="mt-2 p-2 bg-amber-50 rounded-lg"><p class="text-xs font-semibold text-amber-800 mb-0.5">Notes for buyer</p><p class="text-xs text-amber-900">${item.buyer_notes}</p></div>` : ''}
+    </div>
+  `;
+
+  return card;
+}
+
+function toggleItemExpand(itemId) {
+  const detail = document.getElementById(`detail-${itemId}`);
+  if (detail) detail.classList.toggle('open');
+}
+
+// ============================================================
+// MY LIST SCREEN
+// ============================================================
+
+function renderMyList() {
+  const myItems = getUserItems(state.currentUser.id);
+  const filtered = filterItems(myItems, state.mylistPriceFilter);
+
+  document.getElementById('mylist-count').textContent = `${myItems.length} item${myItems.length !== 1 ? 's' : ''}`;
+
+  renderFilterChips('mylist-filters', state.mylistPriceFilter, f => {
+    state.mylistPriceFilter = f;
+    renderMyList();
+  });
+
+  const container = document.getElementById('mylist-items');
+  container.innerHTML = '';
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="text-center py-12 text-stone-400"><div class="text-4xl mb-2">✨</div><p class="font-medium">${myItems.length === 0 ? 'Your wishlist is empty' : 'No items in this price range'}</p><p class="text-sm mt-1">${myItems.length === 0 ? 'Tap + to add your first gift idea' : ''}</p></div>`;
+    return;
+  }
+
+  filtered.forEach(item => {
+    container.appendChild(buildOwnItemCard(item));
+  });
+}
+
+function buildOwnItemCard(item) {
+  const card = document.createElement('div');
+  card.className = 'item-card';
+
+  const imageHTML = item.og_image_url
+    ? `<img src="${item.og_image_url}" alt="" class="og-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="og-placeholder" style="display:none;">🎁</div>`
+    : `<div class="og-placeholder">🎁</div>`;
+
+  card.innerHTML = `
+    ${imageHTML}
+    <div class="p-3">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1" onclick="toggleItemExpand(${item.id})">
+          <p class="font-semibold text-stone-800 text-sm leading-snug">${item.title}</p>
+          ${item.description ? `<p class="text-xs text-stone-500 mt-0.5 line-clamp-2">${item.description}</p>` : ''}
+        </div>
+        <div class="flex items-center gap-1 flex-shrink-0">
+          <span class="badge badge-amber">${priceLabel(item.price_category)}</span>
+          <button onclick="openItemModal(${item.id})" class="p-2 text-stone-400 hover:text-amber-600 transition-colors" aria-label="Edit" style="min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button onclick="openDeleteModal(${item.id})" class="p-2 text-stone-400 hover:text-red-500 transition-colors" aria-label="Delete" style="min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="detail-${item.id}" class="item-detail">
+      ${item.description ? `<p class="text-sm text-stone-600 mb-2">${item.description}</p>` : ''}
+      ${item.url ? `<a href="${item.url}" target="_blank" rel="noopener" class="text-sm text-amber-700 font-semibold hover:underline">Open link →</a>` : ''}
+      ${item.buyer_notes ? `<div class="mt-2 p-2 bg-amber-50 rounded-lg"><p class="text-xs font-semibold text-amber-800 mb-0.5">Notes for buyer</p><p class="text-xs text-amber-900">${item.buyer_notes}</p></div>` : ''}
+    </div>
+  `;
+
+  return card;
+}
+
+// ============================================================
+// MY PURCHASES SCREEN
+// ============================================================
+
+function renderPurchases() {
+  const myClaimedItems = claims
+    .filter(c => c.claimer_id === state.currentUser.id)
+    .map(c => items.find(i => i.id === c.item_id))
+    .filter(Boolean);
+
+  const container = document.getElementById('purchases-content');
+  container.innerHTML = '';
+
+  if (myClaimedItems.length === 0) {
+    container.innerHTML = `<div class="text-center py-16 text-stone-400"><div class="text-4xl mb-2">🛒</div><p class="font-medium">No purchases yet</p><p class="text-sm mt-1">Claim items from family wishlists to track them here.</p></div>`;
+    return;
+  }
+
+  // Group by owner
+  const grouped = {};
+  myClaimedItems.forEach(item => {
+    if (!grouped[item.owner_id]) grouped[item.owner_id] = [];
+    grouped[item.owner_id].push(item);
+  });
+
+  Object.entries(grouped).forEach(([ownerId, ownerItems]) => {
+    const owner = getUser(parseInt(ownerId));
+    if (!owner) return;
+
+    const section = document.createElement('div');
+    const color = avatarColor(owner.id);
+    section.innerHTML = `
+      <div class="section-header">
+        <div class="avatar" style="background:${color};width:1.75rem;height:1.75rem;font-size:0.8rem;">${avatarInitial(owner.display_name)}</div>
+        ${owner.display_name}'s list
+      </div>
+    `;
+
+    ownerItems.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-xl p-3 shadow-sm flex items-center gap-3 mb-2';
+      card.innerHTML = `
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-stone-800 text-sm truncate">${item.title}</p>
+          <span class="badge badge-amber mt-0.5">${priceLabel(item.price_category)}</span>
+        </div>
+        <button onclick="unclaimItem(${item.id})" class="btn btn-outline text-xs px-3 flex-shrink-0" style="min-height:36px;">Unclaim</button>
+      `;
+      section.appendChild(card);
+    });
+
+    container.appendChild(section);
+  });
+}
+
+// ============================================================
+// PROFILE SCREEN
+// ============================================================
+
+function renderProfile() {
+  const u = state.currentUser;
+  const color = avatarColor(u.id);
+  document.getElementById('profile-avatar').style.background = color;
+  document.getElementById('profile-avatar').textContent = avatarInitial(u.display_name);
+  document.getElementById('profile-name-display').textContent = u.display_name;
+  document.getElementById('profile-username-display').textContent = '@' + u.username;
+  document.getElementById('profile-name-input').value = u.display_name;
+
+  const adminSection = document.getElementById('profile-admin-section');
+  adminSection.classList.toggle('hidden', !u.is_admin);
+}
+
+function saveProfileName() {
+  const newName = document.getElementById('profile-name-input').value.trim();
+  if (!newName) { showToast('Name cannot be empty'); return; }
+  state.currentUser.display_name = newName;
+  const user = users.find(u => u.id === state.currentUser.id);
+  if (user) user.display_name = newName;
+  document.getElementById('profile-name-display').textContent = newName;
+  showToast('Name updated!');
+}
+
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+
+function renderAdmin() {
+  const container = document.getElementById('admin-user-list');
+  container.innerHTML = '';
+
+  users.forEach(u => {
+    const color = avatarColor(u.id);
+    const isSelf = u.id === state.currentUser.id;
+    const row = document.createElement('div');
+    row.className = 'bg-white rounded-xl p-4 shadow-sm';
+    row.innerHTML = `
+      <div class="flex items-center gap-3 mb-3">
+        <div class="avatar" style="background:${color};width:2.5rem;height:2.5rem;font-size:1rem;">${avatarInitial(u.display_name)}</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="font-semibold text-stone-800 text-sm">${u.display_name}</p>
+            ${isSelf ? `<span class="badge badge-amber">You</span>` : ''}
+            ${u.is_admin ? `<span class="badge badge-amber">Admin</span>` : ''}
+            ${!u.is_active ? `<span class="badge badge-stone">Inactive</span>` : ''}
+          </div>
+          <p class="text-xs text-stone-500">@${u.username}</p>
+        </div>
+        <div class="flex items-center gap-1 flex-shrink-0">
+          <label class="toggle-switch">
+            <input type="checkbox" ${u.is_active ? 'checked' : ''} ${isSelf ? 'disabled' : ''} onchange="toggleUserActive(${u.id}, this.checked)" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="openResetPwModal(${u.id})" class="btn btn-outline text-xs flex-1" style="min-height:38px;">Reset password</button>
+        ${!isSelf ? `<button onclick="toggleAdminRole(${u.id})" class="btn btn-outline text-xs flex-1" style="min-height:38px;">${u.is_admin ? 'Remove admin' : 'Make admin'}</button>` : ''}
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function toggleUserActive(userId, active) {
+  const user = users.find(u => u.id === userId);
+  if (user) {
+    user.is_active = active;
+    showToast(`${user.display_name} ${active ? 'reactivated' : 'deactivated'}`);
+    renderAdmin();
+  }
+}
+
+function toggleAdminRole(userId) {
+  const user = users.find(u => u.id === userId);
+  if (user) {
+    user.is_admin = !user.is_admin;
+    showToast(`${user.display_name} ${user.is_admin ? 'is now an admin' : 'is no longer an admin'}`);
+    renderAdmin();
+  }
+}
+
+function openAddUserModal() {
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-username').value = '';
+  document.getElementById('new-user-pass').value = '';
+  document.getElementById('modal-adduser').classList.add('open');
+}
+function closeAddUserModal() {
+  document.getElementById('modal-adduser').classList.remove('open');
+}
+function createUser() {
+  const name = document.getElementById('new-user-name').value.trim();
+  const username = document.getElementById('new-user-username').value.trim();
+  if (!name || !username) { showToast('Please fill in all fields'); return; }
+  const newUser = {
+    id: users.length + 1,
+    display_name: name,
+    username,
+    is_admin: false,
+    is_active: true,
+  };
+  users.push(newUser);
+  closeAddUserModal();
+  showToast(`${name} added!`);
+  renderAdmin();
+}
+
+function openResetPwModal(userId) {
+  const user = getUser(userId);
+  state.resetPwUserId = userId;
+  document.getElementById('resetpw-for').textContent = `Resetting password for ${user.display_name}`;
+  document.getElementById('resetpw-value').value = '';
+  document.getElementById('modal-resetpw').classList.add('open');
+}
+function closeResetPwModal() {
+  document.getElementById('modal-resetpw').classList.remove('open');
+}
+function doResetPw() {
+  const pw = document.getElementById('resetpw-value').value.trim();
+  if (!pw) { showToast('Please enter a new password'); return; }
+  const user = getUser(state.resetPwUserId);
+  closeResetPwModal();
+  showToast(`Password reset for ${user.display_name} (demo — share via WhatsApp)`);
+}
+
+// ============================================================
+// CLAIMING
+// ============================================================
+
+function claimItem(itemId) {
+  const existing = getClaim(itemId);
+  if (existing) { showToast('This item was just claimed by someone else'); return; }
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  claims.push({ id: Date.now(), item_id: itemId, claimer_id: state.currentUser.id, claimed_at: new Date().toISOString() });
+  showToast('Item claimed! ✅');
+  renderWishlist();
+}
+
+function unclaimItem(itemId) {
+  const idx = claims.findIndex(c => c.item_id === itemId && c.claimer_id === state.currentUser.id);
+  if (idx === -1) return;
+  claims.splice(idx, 1);
+  showToast('Unclaimed');
+  if (state.currentView === 'purchases') renderPurchases();
+  else renderWishlist();
+}
+
+// ============================================================
+// ADD / EDIT ITEM MODAL
+// ============================================================
+
+function openItemModal(itemId) {
+  state.editingItemId = itemId;
+  const isNew = itemId === null;
+  document.getElementById('modal-item-title').textContent = isNew ? 'Add gift idea' : 'Edit item';
+  document.getElementById('og-preview').classList.add('hidden');
+
+  if (isNew) {
+    document.getElementById('item-title-input').value = '';
+    document.getElementById('item-url-input').value = '';
+    document.getElementById('item-desc-input').value = '';
+    document.getElementById('item-notes-input').value = '';
+    selectPrice('20_50');
+  } else {
+    const item = items.find(i => i.id === itemId);
+    document.getElementById('item-title-input').value = item.title;
+    document.getElementById('item-url-input').value = item.url || '';
+    document.getElementById('item-desc-input').value = item.description || '';
+    document.getElementById('item-notes-input').value = item.buyer_notes || '';
+    selectPrice(item.price_category);
+
+    if (item.og_image_url) {
+      document.getElementById('og-preview-img').src = item.og_image_url;
+      document.getElementById('og-preview-title').textContent = item.title;
+      document.getElementById('og-preview').classList.remove('hidden');
+    }
+  }
+
+  document.getElementById('modal-item').classList.add('open');
+  setTimeout(() => document.getElementById('item-title-input').focus(), 100);
+}
+
+function closeItemModal() {
+  document.getElementById('modal-item').classList.remove('open');
+  if (state.ogFetchTimeout) { clearTimeout(state.ogFetchTimeout); state.ogFetchTimeout = null; }
+}
+
+function handleModalBackdropClick(e) {
+  if (e.target === document.getElementById('modal-item')) closeItemModal();
+}
+
+function selectPrice(price) {
+  state.selectedPrice = price;
+  document.querySelectorAll('#price-selector .price-chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.price === price);
+  });
+}
+
+function mockFetchOG() {
+  const url = document.getElementById('item-url-input').value.trim();
+  if (!url) { showToast('Please enter a URL first'); return; }
+
+  const btn = document.getElementById('fetch-og-btn');
+  btn.textContent = 'Fetching…';
+  btn.disabled = true;
+
+  const mockResults = [
+    { title: 'Lego Technic Ford GT 42154', img: 'https://images.brickset.com/sets/images/42154-1.jpg' },
+    { title: 'Kindle Paperwhite (16GB) — Amazon', img: 'https://m.media-amazon.com/images/I/61Ww4abGclL._AC_SL1000_.jpg' },
+    { title: 'Nike React Infinity Run', img: 'https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/i1-665455ed-6024-4e31-b1a7-68ceb5f59a9b/react-infinity-run-flyknit-3-road-running-shoes-bmdgWT.png' },
+  ];
+  const result = mockResults[Math.floor(Math.random() * mockResults.length)];
+
+  state.ogFetchTimeout = setTimeout(() => {
+    btn.textContent = 'Fetch details';
+    btn.disabled = false;
+    document.getElementById('og-preview-img').src = result.img;
+    document.getElementById('og-preview-title').textContent = result.title;
+    document.getElementById('og-preview').classList.remove('hidden');
+  }, 1500);
+}
+
+function applyOGTitle() {
+  const suggestedTitle = document.getElementById('og-preview-title').textContent;
+  document.getElementById('item-title-input').value = suggestedTitle;
+  document.getElementById('item-title-input').focus();
+}
+
+function saveItem() {
+  const title = document.getElementById('item-title-input').value.trim();
+  if (!title) { showToast('Please enter a title'); document.getElementById('item-title-input').focus(); return; }
+
+  const ogImgEl = document.getElementById('og-preview-img');
+  const ogPreviewVisible = !document.getElementById('og-preview').classList.contains('hidden');
+
+  const data = {
+    title,
+    url: document.getElementById('item-url-input').value.trim() || null,
+    og_image_url: ogPreviewVisible ? ogImgEl.src : null,
+    description: document.getElementById('item-desc-input').value.trim() || null,
+    buyer_notes: document.getElementById('item-notes-input').value.trim() || null,
+    price_category: state.selectedPrice,
+  };
+
+  if (state.editingItemId === null) {
+    // Add new
+    const newItem = {
+      id: Math.max(...items.map(i => i.id)) + 1,
+      owner_id: state.currentUser.id,
+      ...data,
+      created_at: new Date().toISOString(),
+    };
+    items.unshift(newItem);
+    showToast('Gift added! 🎁');
+  } else {
+    // Edit existing
+    const idx = items.findIndex(i => i.id === state.editingItemId);
+    if (idx !== -1) {
+      items[idx] = { ...items[idx], ...data };
+      showToast('Item updated');
+    }
+  }
+
+  closeItemModal();
+  renderMyList();
+}
+
+// ============================================================
+// DELETE ITEM
+// ============================================================
+
+function openDeleteModal(itemId) {
+  const item = items.find(i => i.id === itemId);
+  state.deletingItemId = itemId;
+  document.getElementById('delete-item-name').textContent = `"${item.title}"`;
+  document.getElementById('modal-delete').classList.add('open');
+}
+
+function closeDeleteModal() {
+  document.getElementById('modal-delete').classList.remove('open');
+  state.deletingItemId = null;
+}
+
+function confirmDelete() {
+  const itemId = state.deletingItemId;
+  items = items.filter(i => i.id !== itemId);
+  // Cascade delete claims
+  const claimIdx = claims.findIndex(c => c.item_id === itemId);
+  if (claimIdx !== -1) claims.splice(claimIdx, 1);
+  closeDeleteModal();
+  showToast('Item removed');
+  renderMyList();
+}
+
+// ============================================================
+// FILTER CHIPS
+// ============================================================
+
+function filterItems(itemList, filter) {
+  if (filter === 'all') return itemList;
+  return itemList.filter(i => i.price_category === filter);
+}
+
+function renderFilterChips(containerId, activeFilter, onSelect) {
+  const filters = [
+    { id: 'all', label: 'All' },
+    { id: 'free', label: 'Free' },
+    { id: '0_20', label: '€0–20' },
+    { id: '20_50', label: '€20–50' },
+    { id: '50_100', label: '€50–100' },
+    { id: '100_plus', label: '€100+' },
+  ];
+
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  filters.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = `price-chip${f.id === activeFilter ? ' active' : ''}`;
+    btn.textContent = f.label;
+    btn.onclick = () => onSelect(f.id);
+    container.appendChild(btn);
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+// Allow pressing Enter to login
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('login-username').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('login-password').focus();
+});
+
+</script>
+</body>
+</html>
