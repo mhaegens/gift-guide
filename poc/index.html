@@ -248,6 +248,18 @@
       animation: cardStackBack 360ms cubic-bezier(0.4,0,0.2,1) forwards;
       transform-origin: bottom center;
     }
+
+    /* Screen-level spring entry — mirrors card overlay feel for all nav transitions */
+    @keyframes screenCardEntry {
+      0%   { transform: translateX(55%) scale(0.92) rotate(2deg);      opacity: 0; }
+      50%  { transform: translateX(-1%) scale(1.01) rotate(-0.4deg);   opacity: 1; }
+      75%  { transform: translateX(0.5%) scale(0.995) rotate(0.15deg); opacity: 1; }
+      100% { transform: translateX(0)    scale(1)    rotate(0deg);     opacity: 1; }
+    }
+    .screen.screen-entering {
+      animation: screenCardEntry 460ms cubic-bezier(0.34, 1.28, 0.64, 1) forwards;
+    }
+
     @keyframes cardStackBack {
       0%   { transform: translateY(0)                               scale(1)    rotate(0deg);   opacity: 1;   }
       40%  { transform: translateY(-12%)                            scale(0.88) rotate(-3deg);  opacity: 0.9; }
@@ -800,7 +812,8 @@ function navigateTo(nextEl) {
     prevEl.classList.add('screen-exit');
     setTimeout(() => prevEl.classList.remove('screen-exit'), 380);
   }
-  nextEl.classList.add('active');
+  nextEl.classList.add('active', 'screen-entering');
+  setTimeout(() => nextEl.classList.remove('screen-entering'), 470);
 }
 
 function updateNavActive(view) {
