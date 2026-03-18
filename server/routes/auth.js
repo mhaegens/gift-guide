@@ -31,6 +31,7 @@ router.post('/login', loginLimiter, (req, res) => {
 
   res.json({
     id: user.id,
+    username: user.username,
     display_name: user.display_name,
     is_admin: Boolean(user.is_admin),
     force_password_change: Boolean(user.force_password_change),
@@ -49,6 +50,7 @@ router.get('/me', requireAuth, (req, res) => {
   const u = req.user;
   res.json({
     id: u.id,
+    username: u.username,
     display_name: u.display_name,
     is_admin: Boolean(u.is_admin),
     force_password_change: Boolean(u.force_password_change),

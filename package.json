@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
     "db:init": "node server/db/schema.js",
     "db:seed": "node server/db/seed.js"
   },

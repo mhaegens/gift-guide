@@ -9,7 +9,14 @@ const requireAdmin = require('../middleware/requireAdmin');
 const router = express.Router();
 
 // GET /api/users — list all active users (id + display_name only)
+// Admin users can pass ?all=1 to get full user list including inactive + full details
 router.get('/', requireAuth, (req, res) => {
+  if (req.query.all === '1' && req.user.is_admin) {
+    const users = db.prepare(`
+      SELECT id, username, display_name, is_admin, is_active FROM users ORDER BY display_name ASC
+    `).all();
+    return res.json(users);
+  }
   const users = db.prepare(`
     SELECT id, display_name FROM users WHERE is_active = 1 ORDER BY display_name ASC
   `).all();
