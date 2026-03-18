@@ -10,6 +10,12 @@
       <PriceFilter v-model="priceFilter" />
     </div>
 
+    <WishlistHealthPanel
+      v-if="!loading && items.length > 0"
+      :items="items"
+      @add-item="openAdd"
+    />
+
     <div class="px-4 pt-3 space-y-3 pb-4">
       <div v-if="loading" class="text-center py-8 text-stone-400">
         <p>Loading…</p>
@@ -75,6 +81,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import PriceFilter from '@/components/PriceFilter.vue'
 import ItemCard from '@/components/ItemCard.vue'
 import ItemModal from '@/components/ItemModal.vue'
+import WishlistHealthPanel from '@/components/WishlistHealthPanel.vue'
 import { api } from '@/api/index.js'
 import { currentUser } from '@/stores/auth.js'
 
