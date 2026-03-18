@@ -86,15 +86,19 @@ pm2 -v
 
 ---
 
-## 5. Clone the Repository
+## 5. Clone the Repository and Build the Frontend
+
+This step downloads the code, installs all the pieces it needs to run, and compiles the website files.
 
 ```bash
 git clone <your-repo-url> /opt/gift-guide
 cd /opt/gift-guide
 npm install
+cd client && npm install && cd ..
+npm run build
 ```
 
-Expected output: npm lists installed packages with no errors.
+Expected output: npm lists installed packages with no errors, then Vite prints build stats and creates a `public/` folder. That folder contains the compiled website the server will serve.
 
 ---
 
@@ -177,6 +181,8 @@ curl http://localhost:3000/api/auth/me
 
 ## 9. Configure PM2 to Start on Boot
 
+This makes PM2 (and your app) start automatically when the container reboots, so you never have to start it manually again.
+
 Save the current PM2 process list:
 
 ```bash
@@ -190,7 +196,7 @@ Generate the systemd startup command:
 pm2 startup systemd
 ```
 
-This prints a command starting with `sudo env PATH=...`. **Copy and run that exact command.** Example:
+This prints a long command starting with `sudo env PATH=...`. **Copy that entire line and paste it back into the terminal, then press Enter.** The command is personalised to your system — do not retype it by hand. It will look something like this (yours may differ slightly):
 
 ```bash
 sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u root --hp /root
@@ -231,13 +237,15 @@ cloudflared --version
 
 ## 11. Configure the Cloudflare Tunnel
 
-Authenticate with Cloudflare (this opens a browser link — copy it and open on your machine):
+This connects your app to the internet through Cloudflare, without opening any firewall ports.
+
+Authenticate with Cloudflare:
 
 ```bash
 cloudflared tunnel login
 ```
 
-Follow the browser prompt to authorise the domain `haegens.be`. A certificate is saved to `/root/.cloudflared/cert.pem`.
+This prints a long URL. **Copy it and open it in a browser on your own computer** (not in the terminal — the server has no browser). Log in to Cloudflare and authorise the `haegens.be` domain. When you see a success message in the browser, come back to the terminal. A certificate is saved to `/root/.cloudflared/cert.pem`.
 
 Create the tunnel:
 
@@ -347,7 +355,7 @@ Add to crontab:
 crontab -e
 ```
 
-Add this line at the bottom:
+Add this line at the bottom (this means: run the backup at 3:00 AM every night):
 
 ```
 0 3 * * * /opt/backup-gift-guide.sh
