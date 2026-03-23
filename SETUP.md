@@ -12,7 +12,7 @@ Before starting, you need:
 
 - Access to a Proxmox VE host (web UI or SSH)
 - A Cloudflare account with the `haegens.be` domain
-- The Git repository URL for this project
+- The Git repository URL for this project (find it on GitHub: click the green **Code** button, then copy the HTTPS URL)
 
 ---
 
@@ -39,7 +39,7 @@ Before starting, you need:
 
 ```bash
 apt update && apt upgrade -y
-apt install -y git curl build-essential
+apt install -y git curl build-essential nano
 ```
 
 Set the timezone:
@@ -48,6 +48,12 @@ Set the timezone:
 timedatectl set-timezone Europe/Brussels
 timedatectl status
 # Expected: Time zone: Europe/Brussels (CET, +0100)
+```
+
+Make nano your default text editor for all commands that open one:
+
+```bash
+update-alternatives --set editor /usr/bin/nano
 ```
 
 ---
@@ -73,6 +79,8 @@ npm -v
 
 ## 4. Install PM2 Globally
 
+PM2 is the program that keeps your app running in the background and restarts it automatically if it ever crashes.
+
 ```bash
 npm install -g pm2
 ```
@@ -86,43 +94,71 @@ pm2 -v
 
 ---
 
-## 5. Clone the Repository and Build the Frontend
+## 5. Clone the Repository and Install Dependencies
 
-This step downloads the code, installs all the pieces it needs to run, and compiles the website files.
+This step downloads the code and installs all the pieces it needs to run.
 
 ```bash
 git clone <your-repo-url> /opt/gift-guide
-cd /opt/gift-guide
-npm install
-cd client && npm install && cd ..
-npm run build
 ```
 
-Expected output: npm lists installed packages with no errors, then Vite prints build stats and creates a `public/` folder. That folder contains the compiled website the server will serve.
+Replace `<your-repo-url>` with the HTTPS URL you copied from GitHub (it will look like `https://github.com/yourname/gift-guide.git`).
+
+Install the server dependencies:
+
+```bash
+cd /opt/gift-guide
+npm install
+```
+
+Install the frontend dependencies:
+
+```bash
+cd /opt/gift-guide/client
+npm install
+```
 
 ---
 
-## 6. Configure Environment Variables
+## 6. Build the Frontend
+
+This compiles the website into static files that the server will deliver to visitors. You only need to do this once on first install (and again whenever you update the app).
 
 ```bash
+cd /opt/gift-guide
+npm run build
+```
+
+Expected output: Vite prints build statistics and creates a `public/` folder inside `/opt/gift-guide`. That folder contains the compiled website.
+
+---
+
+## 7. Configure Environment Variables
+
+Environment variables tell the app how to run — things like which port to listen on and what secret to use for login sessions.
+
+```bash
+cd /opt/gift-guide
 cp .env.example .env
 nano .env
 ```
 
-Generate a secure session secret:
+The file will open in the nano text editor. You need to fill in the values described below.
+
+First, generate a secure session secret by opening a **second terminal window** (or tab) and running:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Copy the output and paste it as `SESSION_SECRET` in `.env`.
+Copy the long string of letters and numbers it prints. That is your `SESSION_SECRET`.
 
-Fill in all values:
+Back in the nano editor, update the file so it looks like this (replace the placeholders):
 
 ```env
 NODE_ENV=production
 PORT=3000
-SESSION_SECRET=<paste generated hex string here>
+SESSION_SECRET=<paste the generated hex string here>
 SESSION_TTL_DAYS=30
 DB_PATH=./data/gift-guide.db
 ADMIN_INITIAL_USERNAME=admin
@@ -131,15 +167,17 @@ OG_FETCH_ENABLED=true
 OG_FETCH_TIMEOUT_MS=3000
 ```
 
-Save and close: **Ctrl+X**, then **Y**, then **Enter**.
+Save and close: press **Ctrl+X**, then **Y**, then **Enter**.
 
 ---
 
-## 7. Initialize the Database
+## 8. Initialize the Database
+
+This creates the database file that the app uses to store wishlists, users, and gift claims.
 
 ```bash
-mkdir -p /opt/gift-guide/data
 cd /opt/gift-guide
+mkdir -p /opt/gift-guide/data
 npm run db:init
 # Expected: Database schema initialised at /opt/gift-guide/data/gift-guide.db
 
@@ -156,7 +194,7 @@ ls -lh /opt/gift-guide/data/
 
 ---
 
-## 8. Start the Application with PM2
+## 9. Start the Application with PM2
 
 ```bash
 cd /opt/gift-guide
@@ -179,7 +217,7 @@ curl http://localhost:3000/api/auth/me
 
 ---
 
-## 9. Configure PM2 to Start on Boot
+## 10. Configure PM2 to Start on Boot
 
 This makes PM2 (and your app) start automatically when the container reboots, so you never have to start it manually again.
 
@@ -217,7 +255,7 @@ pm2 status
 
 ---
 
-## 10. Install cloudflared
+## 11. Install cloudflared
 
 Download and install the cloudflared Debian package:
 
@@ -235,7 +273,7 @@ cloudflared --version
 
 ---
 
-## 11. Configure the Cloudflare Tunnel
+## 12. Configure the Cloudflare Tunnel
 
 This connects your app to the internet through Cloudflare, without opening any firewall ports.
 
@@ -253,7 +291,13 @@ Create the tunnel:
 cloudflared tunnel create gift-guide
 ```
 
-Note the tunnel UUID printed in the output — you will need it in the next step.
+The output will include a line like:
+
+```
+Created tunnel gift-guide with id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+**Copy that UUID** (the long string of letters and numbers after `with id`). You will need it in the next step.
 
 Create the tunnel configuration file:
 
@@ -262,7 +306,7 @@ mkdir -p /etc/cloudflared
 nano /etc/cloudflared/config.yml
 ```
 
-Paste the following, replacing `<TUNNEL-UUID>` with the UUID from the previous step:
+Paste the following, replacing `<TUNNEL-UUID>` with the UUID you just copied (both times it appears):
 
 ```yaml
 tunnel: <TUNNEL-UUID>
@@ -286,7 +330,7 @@ Verify in your Cloudflare dashboard under **DNS** that a CNAME record for `gifts
 
 ---
 
-## 12. Install cloudflared as a System Service
+## 13. Install cloudflared as a System Service
 
 ```bash
 cloudflared service install
@@ -303,7 +347,7 @@ systemctl status cloudflared
 
 ---
 
-## 13. Verify the Full Stack
+## 14. Verify the Full Stack
 
 Open a browser and navigate to:
 
@@ -314,12 +358,12 @@ https://gifts.haegens.be
 Expected:
 1. The login screen loads over HTTPS (Cloudflare handles the certificate).
 2. Log in with `ADMIN_INITIAL_USERNAME` / `ADMIN_INITIAL_PASSWORD`.
-3. You are immediately prompted to change your password (`force_password_change` flag).
+3. You are immediately prompted to change your password.
 4. After changing your password, you are logged in and the home screen appears.
 
 ---
 
-## 14. Set Up Daily Database Backup
+## 15. Set Up Daily Database Backup
 
 Create the backup script:
 
@@ -335,7 +379,7 @@ cp /opt/gift-guide/data/gift-guide.db /backup/gift-guide-$(date +%Y%m%d).db
 find /backup -name "gift-guide-*.db" -mtime +30 -delete
 ```
 
-Save and close, then make it executable:
+Save and close, then make it executable and create the backup folder:
 
 ```bash
 chmod +x /opt/backup-gift-guide.sh
@@ -349,32 +393,35 @@ bash /opt/backup-gift-guide.sh && ls /backup/
 # Expected: gift-guide-YYYYMMDD.db
 ```
 
-Add to crontab:
+Add to crontab (the system scheduler) to run every night at 3:00 AM:
 
 ```bash
 crontab -e
 ```
 
-Add this line at the bottom (this means: run the backup at 3:00 AM every night):
+Nano will open. Use the arrow keys to move to the very last line of the file, then add this line:
 
 ```
 0 3 * * * /opt/backup-gift-guide.sh
 ```
 
-Save and close.
+Save and close: **Ctrl+X**, **Y**, **Enter**.
 
 ---
 
-## 15. Ongoing Maintenance
+## 16. Ongoing Maintenance
 
-**Update the application:**
+**Update the application** (after pulling new code from Git):
 
 ```bash
 cd /opt/gift-guide
 git pull
 npm install
+npm run build
 pm2 restart gift-guide
 ```
+
+> Note: `npm run build` recompiles the frontend. Without it, any visual changes in an update will not appear for users.
 
 **View live logs:**
 
@@ -412,7 +459,7 @@ pm2 stop gift-guide
 
 ---
 
-## 16. Troubleshooting
+## 17. Troubleshooting
 
 **App not starting:**
 
