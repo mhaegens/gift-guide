@@ -10,7 +10,7 @@ All commands run as **root** unless otherwise noted.
 
 Before starting, you need:
 
-- Access to a Proxmox VE host (web UI or SSH)
+- SSH access to a Proxmox VE host (root or a user with `PVEAdmin` role)
 - A Cloudflare account with the `haegens.be` domain
 - The Git repository URL for this project (find it on GitHub: click the green **Code** button, then copy the HTTPS URL)
 
@@ -18,20 +18,51 @@ Before starting, you need:
 
 ## 1. Create the LXC Container in Proxmox
 
-1. Log into the Proxmox web UI.
-2. Go to **Datacenter → your node → CT Templates**.
-3. Click **Templates** and download the **Debian 12 Bookworm** template if not already present.
-4. Click **Create CT** and use these settings:
-   - **Hostname:** `gift-guide`
-   - **Password:** set a strong root password
-   - **Template:** Debian 12 Bookworm
-   - **Disk:** 4 GB
-   - **CPU:** 1 core
-   - **Memory:** 512 MB
-   - **Network:** bridge `vmbr0`, DHCP (or static IP if preferred)
-   - **Unprivileged container:** ✓ checked
-5. Click **Finish**, then start the container.
-6. Open the container console via **>_ Console** in the Proxmox UI.
+Run these commands on the **Proxmox host** (SSH in as root or use the host shell).
+
+Choose a container ID that is not yet in use on your node (100 is used as an example below):
+
+```bash
+CTID=100
+```
+
+Download the Debian 12 template if it is not already present:
+
+```bash
+pveam update
+pveam download local debian-12-standard_12.7-1_amd64.tar.zst
+```
+
+> If the exact filename differs on your system, list available templates first:
+> ```bash
+> pveam available --section system | grep debian-12
+> ```
+> Use the filename shown in the output.
+
+Create and start the container (replace `<strong-root-password>` with a real password):
+
+```bash
+pct create $CTID local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst \
+  --hostname gift-guide \
+  --password <strong-root-password> \
+  --cores 1 \
+  --memory 512 \
+  --rootfs local-lvm:4 \
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+  --unprivileged 1
+
+pct start $CTID
+```
+
+> If your storage is named differently, check with `pvesm status`. Replace `local-lvm` with your storage name.
+
+Open a shell inside the container:
+
+```bash
+pct enter $CTID
+```
+
+All commands in the following sections run inside this container shell.
 
 ---
 
