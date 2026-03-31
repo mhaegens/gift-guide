@@ -131,29 +131,37 @@ xdg-open poc/index.html
 
 ---
 
-## Developer Quickstart
+## Quickstart — Docker (recommended)
+
+Prerequisites: Docker + Docker Compose.
+
+```bash
+git clone <repo-url> gift-guide
+cd gift-guide
+cp .env.example .env
+```
+
+Edit `.env` — set `ADMIN_INITIAL_PASSWORD`. (`SESSION_SECRET` is auto-generated if left blank.)
+
+```bash
+docker compose up -d --build
+```
+
+App is running at `http://localhost:3000`. Log in with `admin` / your chosen password.
+
+---
+
+## Developer Quickstart — local
 
 Prerequisites: Node.js 20, npm.
 
 ```bash
 git clone <repo-url> gift-guide
 cd gift-guide
-npm install
-cp .env.example .env
-```
-
-Edit `.env` — at minimum set `SESSION_SECRET` (generate with the command in the file) and `ADMIN_INITIAL_PASSWORD`.
-
-```bash
-npm run db:init    # create tables
-npm run db:seed    # create admin user from .env credentials
-npm run dev        # start server with nodemon on port 3000
-```
-
-To work on the frontend with hot reload, run in a second terminal:
-
-```bash
-npm run dev:client    # Vite dev server on port 5173, proxies /api to port 3000
+cp .env.example .env       # set ADMIN_INITIAL_PASSWORD; SESSION_SECRET is optional for dev
+npm install                # also installs client/ deps automatically
+npm run setup              # create tables + seed admin user
+npm run dev:all            # start backend (port 3000) + Vite frontend (port 5173) together
 ```
 
 To build the frontend for production (required before `npm start`):
