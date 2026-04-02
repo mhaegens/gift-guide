@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY client/package*.json ./client/
 RUN npm ci --omit=dev --ignore-scripts
+RUN npm rebuild better-sqlite3
 RUN npm ci --prefix client
 
 # Stage 2 — build the Vue frontend
