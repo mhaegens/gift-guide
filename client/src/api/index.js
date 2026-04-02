@@ -48,7 +48,7 @@ export const api = {
       post('/api/users', { display_name, username, password }),
     update: (id, data) => patch(`/api/users/${id}`, data),
     resetPassword: (id, new_password) =>
-      post(`/api/users/${id}/reset-password`, { new_password }),
+      post(`/api/users/${id}/reset-password`, { password: new_password }),
   },
   items: {
     list: (userId) => get(`/api/users/${userId}/items`),
