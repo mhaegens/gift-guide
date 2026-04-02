@@ -1,402 +1,115 @@
 # Deployment Setup Guide
 
-This guide covers deploying Gift Guide on a Proxmox LXC container, exposed via a Cloudflare Tunnel at `https://gifts.haegens.be`. Estimated time: ~45 minutes.
-
-All commands run as **root** unless otherwise noted.
+This guide covers deploying Gift Guide using Docker on any Linux host, exposed via a Cloudflare Tunnel at `https://gifts.haegens.be`. Estimated time: ~10 minutes (excluding Cloudflare Tunnel setup, which is external infrastructure).
 
 ---
 
 ## Prerequisites
 
-Before starting, you need:
-
-- SSH access to a Proxmox VE host (root or a user with `PVEAdmin` role)
-- A Cloudflare account with the `haegens.be` domain
-- The Git repository URL for this project (find it on GitHub: click the green **Code** button, then copy the HTTPS URL)
+- Docker and Docker Compose installed on the host
+- SSH access to the host
+- A Cloudflare Tunnel already configured to forward `https://gifts.haegens.be` → `http://localhost:3000` (see [Cloudflare Tunnel docs](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/))
 
 ---
 
-## 1. Create the LXC Container in Proxmox
-
-Run these commands on the **Proxmox host** (SSH in as root or use the host shell).
-
-Choose a container ID that is not yet in use on your node (100 is used as an example below):
-
-```bash
-CTID=100
-```
-
-Download the Debian 12 template if it is not already present:
-
-```bash
-pveam update
-pveam download local debian-12-standard_12.7-1_amd64.tar.zst
-```
-
-> If the exact filename differs on your system, list available templates first:
-> ```bash
-> pveam available --section system | grep debian-12
-> ```
-> Use the filename shown in the output.
-
-Create and start the container (replace `<strong-root-password>` with a real password):
-
-```bash
-pct create $CTID local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst \
-  --hostname gift-guide \
-  --password <strong-root-password> \
-  --cores 1 \
-  --memory 512 \
-  --rootfs local-lvm:4 \
-  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
-  --unprivileged 1
-
-pct start $CTID
-```
-
-> If your storage is named differently, check with `pvesm status`. Replace `local-lvm` with your storage name.
-
-Open a shell inside the container:
-
-```bash
-pct enter $CTID
-```
-
-All commands in the following sections run inside this container shell.
-
----
-
-## 2. Initial System Setup
-
-```bash
-apt update && apt upgrade -y
-apt install -y git curl build-essential nano
-```
-
-Set the timezone:
-
-```bash
-timedatectl set-timezone Europe/Brussels
-timedatectl status
-# Expected: Time zone: Europe/Brussels (CET, +0100)
-```
-
-Make nano your default text editor for all commands that open one:
-
-```bash
-update-alternatives --set editor /usr/bin/nano
-```
-
----
-
-## 3. Install Node.js 20 LTS
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
-```
-
-Verify:
-
-```bash
-node -v
-# Expected: v20.x.x
-
-npm -v
-# Expected: 10.x.x
-```
-
----
-
-## 4. Install PM2 Globally
-
-PM2 is the program that keeps your app running in the background and restarts it automatically if it ever crashes.
-
-```bash
-npm install -g pm2
-```
-
-Verify:
-
-```bash
-pm2 -v
-# Expected: 5.x.x
-```
-
----
-
-## 5. Clone the Repository and Install Dependencies
-
-This step downloads the code and installs all the pieces it needs to run.
+## 1. Clone the Repository
 
 ```bash
 git clone <your-repo-url> /opt/gift-guide
-```
-
-Replace `<your-repo-url>` with the HTTPS URL you copied from GitHub (it will look like `https://github.com/yourname/gift-guide.git`).
-
-Install the server dependencies:
-
-```bash
 cd /opt/gift-guide
-npm install
 ```
 
-Install the frontend dependencies:
-
-```bash
-cd /opt/gift-guide/client
-npm install
-```
+Replace `<your-repo-url>` with the HTTPS URL from GitHub.
 
 ---
 
-## 6. Build the Frontend
-
-This compiles the website into static files that the server will deliver to visitors. You only need to do this once on first install (and again whenever you update the app).
+## 2. Configure Environment Variables
 
 ```bash
-cd /opt/gift-guide
-npm run build
-```
-
-Expected output: Vite prints build statistics and creates a `public/` folder inside `/opt/gift-guide`. That folder contains the compiled website.
-
----
-
-## 7. Configure Environment Variables
-
-Environment variables tell the app how to run — things like which port to listen on and what secret to use for login sessions.
-
-```bash
-cd /opt/gift-guide
 cp .env.example .env
 nano .env
 ```
 
-The file will open in the nano text editor. You need to fill in the values described below.
+You must set at minimum:
 
-First, generate a secure session secret by opening a **second terminal window** (or tab) and running:
+```env
+NODE_ENV=production
+SESSION_SECRET=<generated-hex-string>
+ADMIN_INITIAL_PASSWORD=<choose a strong temporary password>
+```
+
+Generate a secure `SESSION_SECRET`:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Copy the long string of letters and numbers it prints. That is your `SESSION_SECRET`.
+> **Important:** Set `SESSION_SECRET` explicitly. If left blank the container will auto-generate one on startup, but it will change on every restart — logging all users out each time the container is restarted.
 
-Back in the nano editor, update the file so it looks like this (replace the placeholders):
+The other values in `.env.example` have safe defaults and do not need to be changed for a standard deployment.
 
-```env
-NODE_ENV=production
-PORT=3000
-SESSION_SECRET=<paste the generated hex string here>
-SESSION_TTL_DAYS=30
-DB_PATH=./data/gift-guide.db
-ADMIN_INITIAL_USERNAME=admin
-ADMIN_INITIAL_PASSWORD=<choose a strong temporary password>
-OG_FETCH_ENABLED=true
-OG_FETCH_TIMEOUT_MS=3000
-```
-
-Save and close: press **Ctrl+X**, then **Y**, then **Enter**.
+Save and close: **Ctrl+X**, **Y**, **Enter**.
 
 ---
 
-## 8. Initialize the Database
-
-This creates the database file that the app uses to store wishlists, users, and gift claims.
+## 3. Start the Application
 
 ```bash
-cd /opt/gift-guide
-mkdir -p /opt/gift-guide/data
-npm run db:init
-# Expected: Database schema initialised at /opt/gift-guide/data/gift-guide.db
-
-npm run db:seed
-# Expected: Admin user "admin" created. Password change required on first login.
+docker compose up -d --build
 ```
 
-Verify the database file was created:
-
-```bash
-ls -lh /opt/gift-guide/data/
-# Expected: gift-guide.db  (a few KB)
-```
+Docker will build the image, initialise the database, and start the app. The `./data/` directory on the host is mounted into the container so the SQLite database persists across restarts and image rebuilds.
 
 ---
 
-## 9. Start the Application with PM2
+## 4. Verify
+
+Check that the container is running:
 
 ```bash
-cd /opt/gift-guide
-pm2 start ecosystem.config.js
+docker compose ps
+# Expected: app  running  0.0.0.0:3000->3000/tcp
 ```
 
-Check status:
+Check the startup logs:
 
 ```bash
-pm2 status
-# Expected: gift-guide  online  0s  ...
+docker compose logs app
 ```
 
-Test that the server is responding:
+Expected output includes lines like:
+```
+Database schema initialised at /app/data/gift-guide.db
+Admin user "admin" created. Password change required on first login.
+Gift Guide listening on port 3000
+```
+
+Test the API directly:
 
 ```bash
 curl http://localhost:3000/api/auth/me
 # Expected: {"error":"Please log in"}  (HTTP 401 — server is running)
 ```
 
----
-
-## 10. Configure PM2 to Start on Boot
-
-This makes PM2 (and your app) start automatically when the container reboots, so you never have to start it manually again.
-
-Save the current PM2 process list:
-
-```bash
-pm2 save
-# Expected: [PM2] Saving current process list...
-```
-
-Generate the systemd startup command:
-
-```bash
-pm2 startup systemd
-```
-
-This prints a long command starting with `sudo env PATH=...`. **Copy that entire line and paste it back into the terminal, then press Enter.** The command is personalised to your system — do not retype it by hand. It will look something like this (yours may differ slightly):
-
-```bash
-sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u root --hp /root
-```
-
-Test by rebooting:
-
-```bash
-reboot
-```
-
-After the container restarts, SSH back in (or use the Proxmox console) and verify:
-
-```bash
-pm2 status
-# Expected: gift-guide  online
-```
+If the Cloudflare Tunnel is active, open `https://gifts.haegens.be` in a browser. Log in with `admin` / the password you set in `.env`. You will be prompted to change your password on first login.
 
 ---
 
-## 11. Install cloudflared
-
-Download and install the cloudflared Debian package:
+## 5. Updating the Application
 
 ```bash
-curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
-dpkg -i /tmp/cloudflared.deb
+cd /opt/gift-guide
+git pull
+docker compose up -d --build
 ```
 
-Verify:
-
-```bash
-cloudflared --version
-# Expected: cloudflared version 202x.x.x
-```
+Docker rebuilds the image (including the frontend) and replaces the running container. The database is preserved via the host volume.
 
 ---
 
-## 12. Configure the Cloudflare Tunnel
+## 6. Daily Database Backup
 
-This connects your app to the internet through Cloudflare, without opening any firewall ports.
-
-Authenticate with Cloudflare:
-
-```bash
-cloudflared tunnel login
-```
-
-This prints a long URL. **Copy it and open it in a browser on your own computer** (not in the terminal — the server has no browser). Log in to Cloudflare and authorise the `haegens.be` domain. When you see a success message in the browser, come back to the terminal. A certificate is saved to `/root/.cloudflared/cert.pem`.
-
-Create the tunnel:
-
-```bash
-cloudflared tunnel create gift-guide
-```
-
-The output will include a line like:
-
-```
-Created tunnel gift-guide with id xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
-
-**Copy that UUID** (the long string of letters and numbers after `with id`). You will need it in the next step.
-
-Create the tunnel configuration file:
-
-```bash
-mkdir -p /etc/cloudflared
-nano /etc/cloudflared/config.yml
-```
-
-Paste the following, replacing `<TUNNEL-UUID>` with the UUID you just copied (both times it appears):
-
-```yaml
-tunnel: <TUNNEL-UUID>
-credentials-file: /root/.cloudflared/<TUNNEL-UUID>.json
-
-ingress:
-  - hostname: gifts.haegens.be
-    service: http://localhost:3000
-  - service: http_status:404
-```
-
-Save and close: **Ctrl+X**, **Y**, **Enter**.
-
-Route the DNS record:
-
-```bash
-cloudflared tunnel route dns gift-guide gifts.haegens.be
-```
-
-Verify in your Cloudflare dashboard under **DNS** that a CNAME record for `gifts` pointing to `<TUNNEL-UUID>.cfargotunnel.com` was created.
-
----
-
-## 13. Install cloudflared as a System Service
-
-```bash
-cloudflared service install
-systemctl enable cloudflared
-systemctl start cloudflared
-```
-
-Check that it is running:
-
-```bash
-systemctl status cloudflared
-# Expected: Active: active (running)
-```
-
----
-
-## 14. Verify the Full Stack
-
-Open a browser and navigate to:
-
-```
-https://gifts.haegens.be
-```
-
-Expected:
-1. The login screen loads over HTTPS (Cloudflare handles the certificate).
-2. Log in with `ADMIN_INITIAL_USERNAME` / `ADMIN_INITIAL_PASSWORD`.
-3. You are immediately prompted to change your password.
-4. After changing your password, you are logged in and the home screen appears.
-
----
-
-## 15. Set Up Daily Database Backup
-
-Create the backup script:
+The database file lives at `./data/gift-guide.db` on the host. Back it up with a cron job:
 
 ```bash
 nano /opt/backup-gift-guide.sh
@@ -417,119 +130,79 @@ chmod +x /opt/backup-gift-guide.sh
 mkdir -p /backup
 ```
 
-Test it manually:
+Test manually:
 
 ```bash
 bash /opt/backup-gift-guide.sh && ls /backup/
 # Expected: gift-guide-YYYYMMDD.db
 ```
 
-Add to crontab (the system scheduler) to run every night at 3:00 AM:
+Schedule it to run every night at 3:00 AM:
 
 ```bash
 crontab -e
 ```
 
-Nano will open. Use the arrow keys to move to the very last line of the file, then add this line:
+Add this line at the end:
 
 ```
 0 3 * * * /opt/backup-gift-guide.sh
 ```
 
-Save and close: **Ctrl+X**, **Y**, **Enter**.
-
 ---
 
-## 16. Ongoing Maintenance
-
-**Update the application** (after pulling new code from Git):
-
-```bash
-cd /opt/gift-guide
-git pull
-npm install
-npm run build
-pm2 restart gift-guide
-```
-
-> Note: `npm run build` recompiles the frontend. Without it, any visual changes in an update will not appear for users.
+## 7. Ongoing Maintenance
 
 **View live logs:**
 
 ```bash
-pm2 logs gift-guide
+docker compose logs -f app
 ```
 
-**View error logs only:**
+**View error output only:**
 
 ```bash
-pm2 logs gift-guide --err
-```
-
-**Inspect the database:**
-
-```bash
-apt install -y sqlite3
-sqlite3 /opt/gift-guide/data/gift-guide.db
-sqlite> .tables
-sqlite> SELECT id, username, is_admin FROM users;
-sqlite> .quit
+docker compose logs app 2>&1 | grep -i error
 ```
 
 **Restart the app:**
 
 ```bash
-pm2 restart gift-guide
+docker compose restart app
 ```
 
 **Stop the app:**
 
 ```bash
-pm2 stop gift-guide
+docker compose down
+```
+
+**Inspect the database:**
+
+```bash
+docker compose exec app sh -c "sqlite3 data/gift-guide.db"
+sqlite> .tables
+sqlite> SELECT id, username, is_admin FROM users;
+sqlite> .quit
+```
+
+Or directly on the host (if `sqlite3` is installed):
+
+```bash
+sqlite3 /opt/gift-guide/data/gift-guide.db "SELECT id, username, is_admin FROM users;"
 ```
 
 ---
 
-## 17. Troubleshooting
+## 8. Troubleshooting
 
-**App not starting:**
-
-```bash
-pm2 logs gift-guide --err --lines 50
-```
-
-Common cause: `.env` file missing or `SESSION_SECRET` not set.
-
-**Cannot reach `gifts.haegens.be`:**
+**Container not starting:**
 
 ```bash
-systemctl status cloudflared
-journalctl -u cloudflared -n 50
+docker compose logs app
 ```
 
-Check that the tunnel UUID in `/etc/cloudflared/config.yml` matches the JSON credentials file in `/root/.cloudflared/`.
-
-**Login failing:**
-
-```bash
-sqlite3 /opt/gift-guide/data/gift-guide.db "SELECT id, username FROM users;"
-```
-
-If empty, the database was not seeded. Run `npm run db:seed` from `/opt/gift-guide`.
-
-**Database locked errors:**
-
-```bash
-pm2 list
-```
-
-Ensure only one instance of `gift-guide` is running. If multiple instances show, run:
-
-```bash
-pm2 delete gift-guide
-pm2 start ecosystem.config.js
-pm2 save
-```
+Common causes: `.env` missing, `ADMIN_INITIAL_PASSWORD` not set, or port 3000 already in use on the host.
 
 **Port already in use:**
 
@@ -537,4 +210,26 @@ pm2 save
 lsof -i :3000
 ```
 
-Kill the conflicting process or change `PORT` in `.env`.
+Kill the conflicting process, or change the host-side port in `docker-compose.yml` (e.g. `"3001:3000"`) and update the Cloudflare Tunnel config accordingly.
+
+**Cannot reach `gifts.haegens.be`:**
+
+First confirm the app itself is responding locally:
+
+```bash
+curl http://localhost:3000/api/auth/me
+```
+
+If that works, the issue is with the Cloudflare Tunnel, not the app. Check the tunnel service on the host.
+
+**Login failing / no admin user:**
+
+```bash
+docker compose logs app | grep -i seed
+```
+
+If the seed step did not run, restart the container — the entrypoint runs schema initialisation and seeding automatically on every start (both operations are idempotent).
+
+**Sessions lost after restart:**
+
+Set `SESSION_SECRET` to a fixed value in `.env` (see step 2). Without it, a new secret is generated on each startup.
