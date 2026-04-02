@@ -58,8 +58,8 @@ router.get('/me', requireAuth, (req, res) => {
 });
 
 // POST /api/auth/change-password
-router.post('/change-password', requireAuth, (req, res) => {
-  const { current_password, new_password } = req.body || {};
+router.post('/change-password', (req, res) => {
+  const { current_password, new_password, username } = req.body || {};
 
   if (!current_password || !new_password) {
     return res.status(422).json({ error: 'current_password and new_password are required' });
@@ -69,7 +69,21 @@ router.post('/change-password', requireAuth, (req, res) => {
     return res.status(422).json({ error: 'New password must be at least 8 characters' });
   }
 
-  if (!bcrypt.compareSync(current_password, req.user.password_hash)) {
+  // Identify the user: prefer active session, fall back to username in body
+  let user = null;
+  if (req.session && req.session.userId) {
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
+    if (user && !user.is_active) user = null;
+  }
+  if (!user && username) {
+    user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+    if (user && !user.is_active) user = null;
+  }
+  if (!user) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  if (!bcrypt.compareSync(current_password, user.password_hash)) {
     return res.status(403).json({ error: 'Current password is incorrect' });
   }
 
@@ -78,7 +92,7 @@ router.post('/change-password', requireAuth, (req, res) => {
     UPDATE users
     SET password_hash = ?, force_password_change = 0
     WHERE id = ?
-  `).run(hash, req.user.id);
+  `).run(hash, user.id);
 
   res.json({ ok: true });
 });

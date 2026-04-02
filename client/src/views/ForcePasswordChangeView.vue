@@ -32,7 +32,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/index.js'
-import { currentUser } from '@/stores/auth.js'
+import { currentUser, logout } from '@/stores/auth.js'
 
 const router = useRouter()
 const currentPw = ref('')
@@ -53,9 +53,9 @@ async function save() {
   loading.value = true
   error.value = ''
   try {
-    await api.auth.changePassword(currentPw.value, newPw.value)
-    if (currentUser.value) currentUser.value.force_password_change = false
-    router.push('/')
+    await api.auth.changePassword(currentPw.value, newPw.value, currentUser.value?.username)
+    await logout()
+    router.push('/login')
   } catch (err) {
     error.value = err.message || 'Failed to change password'
   } finally {
