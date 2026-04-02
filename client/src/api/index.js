@@ -38,8 +38,8 @@ export const api = {
     login: (username, password) => post('/api/auth/login', { username, password }),
     logout: () => post('/api/auth/logout'),
     me: () => get('/api/auth/me'),
-    changePassword: (current_password, new_password) =>
-      post('/api/auth/change-password', { current_password, new_password }),
+    changePassword: (current_password, new_password, username) =>
+      post('/api/auth/change-password', { current_password, new_password, ...(username ? { username } : {}) }),
   },
   users: {
     list: () => get('/api/users'),
