@@ -66,55 +66,59 @@
     </div>
 
     <!-- Add User modal -->
-    <transition name="modal">
-      <div v-if="showAddUser" class="modal-overlay" @click.self="showAddUser = false">
-        <div class="modal-sheet" @click.stop>
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-lg text-stone-800">Add user</h3>
-            <button class="btn btn-ghost p-1" @click="showAddUser = false">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5">
-                <path d="M18 6L6 18M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-          <div class="space-y-4">
-            <div><label class="form-label">Display name</label><input v-model="newUser.display_name" type="text" class="form-input" placeholder="e.g. Grandma Elsa" /></div>
-            <div><label class="form-label">Username</label><input v-model="newUser.username" type="text" class="form-input" placeholder="e.g. grandma_elsa" /></div>
-            <div><label class="form-label">Temporary password</label><input v-model="newUser.password" type="text" class="form-input" placeholder="Share via WhatsApp" /></div>
-            <p v-if="addUserError" class="text-sm text-red-600">{{ addUserError }}</p>
-            <div class="flex gap-3 pt-2">
-              <button class="btn btn-outline flex-1" @click="showAddUser = false">Cancel</button>
-              <button class="btn btn-amber flex-1" :disabled="addingUser" @click="createUser">{{ addingUser ? 'Creating…' : 'Create account' }}</button>
+    <Teleport to="body">
+      <transition name="modal">
+        <div v-if="showAddUser" class="modal-overlay" @click.self="showAddUser = false">
+          <div class="modal-sheet" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-lg text-stone-800">Add user</h3>
+              <button class="btn btn-ghost p-1" @click="showAddUser = false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            <div class="space-y-4">
+              <div><label class="form-label">Display name</label><input v-model="newUser.display_name" type="text" class="form-input" placeholder="e.g. Grandma Elsa" /></div>
+              <div><label class="form-label">Username</label><input v-model="newUser.username" type="text" class="form-input" placeholder="e.g. grandma_elsa" /></div>
+              <div><label class="form-label">Temporary password</label><input v-model="newUser.password" type="text" class="form-input" placeholder="Share via WhatsApp" /></div>
+              <p v-if="addUserError" class="text-sm text-red-600">{{ addUserError }}</p>
+              <div class="flex gap-3 pt-2">
+                <button class="btn btn-outline flex-1" @click="showAddUser = false">Cancel</button>
+                <button class="btn btn-amber flex-1" :disabled="addingUser" @click="createUser">{{ addingUser ? 'Creating…' : 'Create account' }}</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </transition>
+      </transition>
+    </Teleport>
 
     <!-- Reset password modal -->
-    <transition name="modal">
-      <div v-if="resetPwUser" class="modal-overlay" @click.self="resetPwUser = null">
-        <div class="modal-sheet" @click.stop>
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="font-bold text-lg text-stone-800">Reset password</h3>
-            <button class="btn btn-ghost p-1" @click="resetPwUser = null">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5">
-                <path d="M18 6L6 18M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-          <p class="text-sm text-stone-500 mb-4">Resetting password for {{ resetPwUser?.display_name }}</p>
-          <div class="space-y-4">
-            <div><label class="form-label">New temporary password</label><input v-model="newPw" type="text" class="form-input" placeholder="Share via WhatsApp" /></div>
-            <p v-if="resetPwError" class="text-sm text-red-600">{{ resetPwError }}</p>
-            <div class="flex gap-3 pt-2">
-              <button class="btn btn-outline flex-1" @click="resetPwUser = null">Cancel</button>
-              <button class="btn btn-amber flex-1" :disabled="resettingPw" @click="doResetPw">{{ resettingPw ? 'Saving…' : 'Reset password' }}</button>
+    <Teleport to="body">
+      <transition name="modal">
+        <div v-if="resetPwUser" class="modal-overlay" @click.self="resetPwUser = null">
+          <div class="modal-sheet" @click.stop>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-bold text-lg text-stone-800">Reset password</h3>
+              <button class="btn btn-ghost p-1" @click="resetPwUser = null">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            <p class="text-sm text-stone-500 mb-4">Resetting password for {{ resetPwUser?.display_name }}</p>
+            <div class="space-y-4">
+              <div><label class="form-label">New temporary password</label><input v-model="newPw" type="text" class="form-input" placeholder="Share via WhatsApp" /></div>
+              <p v-if="resetPwError" class="text-sm text-red-600">{{ resetPwError }}</p>
+              <div class="flex gap-3 pt-2">
+                <button class="btn btn-outline flex-1" @click="resetPwUser = null">Cancel</button>
+                <button class="btn btn-amber flex-1" :disabled="resettingPw" @click="doResetPw">{{ resettingPw ? 'Saving…' : 'Reset password' }}</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </transition>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
