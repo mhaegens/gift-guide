@@ -21,6 +21,7 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 const DB_DIR = path.dirname(path.resolve(process.env.DB_PATH || './data/gift-guide.db'));
 
 app.use(express.json());
+app.set('trust proxy', 1);
 
 app.use(session({
   store: new SQLiteStore({ db: 'sessions.db', dir: DB_DIR }),
