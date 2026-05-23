@@ -24,6 +24,8 @@
           <button class="btn btn-amber px-4" @click="showAddUser = true">+ Add user</button>
         </div>
 
+        <p v-if="loadError" class="text-sm text-red-600 mb-4">{{ loadError }}</p>
+
         <div class="space-y-3">
           <div
             v-for="u in users"
@@ -141,6 +143,7 @@ const resetPwError = ref('')
 const resettingPw = ref(false)
 const animClass = ref('entering')
 const closing = ref(false)
+const loadError = ref('')
 
 watch(() => props.show, async (val) => {
   if (val) {
@@ -151,9 +154,13 @@ watch(() => props.show, async (val) => {
 })
 
 async function loadUsers() {
+  loadError.value = ''
   try {
     users.value = await api.users.listAll()
-  } catch {}
+  } catch (err) {
+    loadError.value = err.message || 'Failed to load users'
+    users.value = []
+  }
 }
 
 function startClose() {
@@ -175,20 +182,27 @@ async function toggleAdmin(u) {
   try {
     await api.users.update(u.id, { is_admin: !u.is_admin })
     u.is_admin = !u.is_admin
-  } catch {}
+  } catch (err) {
+    loadError.value = err.message || 'Failed to update admin status'
+  }
 }
 
 async function toggleActive(u) {
   try {
     await api.users.update(u.id, { is_active: !u.is_active })
     u.is_active = !u.is_active
-  } catch {}
+  } catch (err) {
+    loadError.value = err.message || 'Failed to update active status'
+  }
 }
 
 async function createUser() {
-  if (!newUser.value.display_name || !newUser.value.username || !newUser.value.password) return
-  addingUser.value = true
   addUserError.value = ''
+  if (!newUser.value.display_name || !newUser.value.username || !newUser.value.password) {
+    addUserError.value = 'All fields are required'
+    return
+  }
+  addingUser.value = true
   try {
     const created = await api.users.create(
       newUser.value.display_name,
@@ -199,7 +213,7 @@ async function createUser() {
     newUser.value = { display_name: '', username: '', password: '' }
     showAddUser.value = false
   } catch (err) {
-    addUserError.value = err.message
+    addUserError.value = err.message || 'Failed to create user'
   } finally {
     addingUser.value = false
   }
