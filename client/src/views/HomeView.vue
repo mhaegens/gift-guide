@@ -18,13 +18,15 @@
     <div
       v-else
       ref="gridEl"
-      class="px-4 pb-4 grid grid-cols-2 gap-4"
+      class="px-4 pb-4 user-grid-container lg:grid lg:grid-cols-2 lg:gap-4"
     >
       <UserCard
-        v-for="u in usersWithCounts"
+        v-for="(u, index) in usersWithCounts"
         :key="u.id"
         :user="u"
         :isSelf="u.id === currentUser?.id"
+        :style="{ '--card-index': index }"
+        class="user-card"
         @click="openWishlist(u)"
       />
     </div>
