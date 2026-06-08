@@ -1,5 +1,5 @@
 <template>
-  <nav class="bg-white/95 backdrop-blur-sm border-t border-stone-100">
+  <nav class="bg-white/95 backdrop-blur-sm border-t border-stone-100" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
     <div class="flex">
       <button class="nav-btn" :class="{ active: isActive('/') }" @click="router.push('/')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
