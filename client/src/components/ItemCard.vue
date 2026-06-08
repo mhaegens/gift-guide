@@ -22,6 +22,9 @@
             <span class="badge text-xs" :class="priceBadgeClass(item.price_category)">
               {{ priceLabel(item.price_category) }}
             </span>
+            <span v-if="!isOwnList && item.is_claimed" class="badge badge-emerald text-xs">
+              Claimed ✓
+            </span>
           </div>
           <p v-if="item.buyer_notes && !expanded" class="text-xs text-stone-400 mt-1 truncate">
             {{ item.buyer_notes }}
