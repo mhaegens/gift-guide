@@ -39,7 +39,7 @@
               </button>
             </div>
             <!-- OG preview -->
-            <div v-if="ogPreview.title || ogPreview.image" class="mt-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <div v-if="ogPreview.title" class="mt-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
               <div class="flex gap-3 items-center">
                 <img
                   v-if="ogPreview.image"
@@ -55,6 +55,25 @@
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Image URL -->
+          <div>
+            <label class="form-label">Image URL</label>
+            <input
+              v-model="form.og_image_url"
+              type="url"
+              class="form-input"
+              placeholder="https://… (auto-filled from product URL)"
+            />
+            <div v-if="form.og_image_url" class="mt-2">
+              <img
+                :src="form.og_image_url"
+                alt=""
+                class="w-24 h-24 rounded-lg object-cover bg-stone-100"
+                @error="form.og_image_url = ''"
+              />
             </div>
           </div>
 
@@ -139,12 +158,13 @@ watch(() => props.show, (val) => {
       form.value = {
         title: props.item.title || '',
         url: props.item.url || '',
+        og_image_url: props.item.og_image_url || '',
         price_category: props.item.price_category || '',
         description: props.item.description || '',
         buyer_notes: props.item.buyer_notes || '',
       }
     } else {
-      form.value = { title: '', url: '', price_category: '0_20', description: '', buyer_notes: '' }
+      form.value = { title: '', url: '', og_image_url: '', price_category: '0_20', description: '', buyer_notes: '' }
     }
   }
 })
@@ -155,7 +175,10 @@ async function fetchOG() {
   try {
     const result = await api.items.enrich(form.value.url)
     if (result.title) ogPreview.value.title = result.title
-    if (result.og_image_url) ogPreview.value.image = result.og_image_url
+    if (result.og_image_url) {
+      ogPreview.value.image = result.og_image_url
+      if (!form.value.og_image_url) form.value.og_image_url = result.og_image_url
+    }
   } catch {
     // silent
   } finally {
@@ -183,12 +206,11 @@ async function save() {
     const payload = {
       title: form.value.title.trim(),
       url: form.value.url || null,
+      og_image_url: form.value.og_image_url || null,
       price_category: form.value.price_category,
       description: form.value.description || null,
       buyer_notes: form.value.buyer_notes || null,
     }
-    // Include og_image_url if we fetched one and there's no existing one or it's a new item
-    if (ogPreview.value.image) payload.og_image_url = ogPreview.value.image
 
     if (props.item) {
       const updated = await api.items.update(props.item.id, payload)

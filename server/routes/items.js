@@ -59,7 +59,7 @@ userRouter.get('/:id/items', requireAuth, (req, res) => {
 
 // POST /api/users/me/items
 userRouter.post('/me/items', requireAuth, (req, res) => {
-  const { title, description, url, buyer_notes, price_category } = req.body || {};
+  const { title, description, url, og_image_url, buyer_notes, price_category } = req.body || {};
 
   if (!title) {
     return res.status(422).json({ error: 'title is required' });
@@ -69,20 +69,20 @@ userRouter.post('/me/items', requireAuth, (req, res) => {
   }
 
   const result = db.prepare(`
-    INSERT INTO wishlist_items (owner_id, title, description, url, buyer_notes, price_category)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(req.user.id, title, description || null, url || null, buyer_notes || null, price_category);
+    INSERT INTO wishlist_items (owner_id, title, description, url, og_image_url, buyer_notes, price_category)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(req.user.id, title, description || null, url || null, og_image_url || null, buyer_notes || null, price_category);
 
   const item = db.prepare('SELECT * FROM wishlist_items WHERE id = ?').get(result.lastInsertRowid);
 
-  // Fire-and-forget OG enrichment
+  // Fire-and-forget OG enrichment — only fills in image if not already provided by the client
   if (url && process.env.OG_FETCH_ENABLED === 'true') {
     const newItemId = result.lastInsertRowid;
     ogEnricher(url).then(meta => {
       if (meta.og_image_url || meta.title) {
         db.prepare(`
           UPDATE wishlist_items
-          SET og_image_url = COALESCE(?, og_image_url), updated_at = CURRENT_TIMESTAMP
+          SET og_image_url = COALESCE(og_image_url, ?), updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(meta.og_image_url || null, newItemId);
       }
@@ -104,12 +104,13 @@ userRouter.patch('/me/items/:itemId', requireAuth, (req, res) => {
     return res.status(403).json({ error: 'Not allowed' });
   }
 
-  const { title, description, url, buyer_notes, price_category } = req.body || {};
+  const { title, description, url, og_image_url, buyer_notes, price_category } = req.body || {};
   const updates = {};
 
   if (title !== undefined) updates.title = title;
   if (description !== undefined) updates.description = description;
   if (url !== undefined) updates.url = url;
+  if (og_image_url !== undefined) updates.og_image_url = og_image_url || null;
   if (buyer_notes !== undefined) updates.buyer_notes = buyer_notes;
   if (price_category !== undefined) {
     if (!VALID_PRICE_CATEGORIES.includes(price_category)) {
