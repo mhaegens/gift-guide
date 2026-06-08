@@ -1,0 +1,17 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gift-guide-app
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+    volumes:
+      - gift-guide-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  gift-guide-data:
+    driver: local
