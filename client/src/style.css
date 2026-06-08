@@ -95,6 +95,10 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
 }
 .toast.show { opacity: 1; }
 
+#app-card nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* ── Scrollbar hide ── */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -147,7 +151,7 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
 #app-card .bottom-nav { position: absolute !important; left: 0; right: 0; bottom: 0; }
 #app-card .modal-overlay { position: absolute !important; }
 #app-card .toast { position: absolute !important; left: 50%; transform: translateX(-50%); top: 1rem; width: max-content; }
-#app-card .fab-add { position: absolute !important; bottom: 5rem; right: 1rem; }
+#app-card .fab-add { position: absolute !important; bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); right: 1rem; }
 #app-card .card-overlay { border-radius: 2.75rem; overflow: hidden; }
 
 /* ── Desktop phone-card layout ── */
