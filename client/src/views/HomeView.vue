@@ -25,7 +25,6 @@
         :key="u.id"
         :user="u"
         :isSelf="u.id === currentUser?.id"
-        :style="{ '--card-index': index }"
         class="user-card"
         @click="openWishlist(u)"
       />

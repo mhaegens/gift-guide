@@ -324,52 +324,20 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
   animation: backdropFadeOut 260ms ease forwards;
 }
 
-/* ── Mobile stacked cards layout ── */
+/* ── User grid layout (all screen sizes) ── */
 .user-grid-container {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-height: 400px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
 }
 .user-card {
-  position: absolute;
-  width: calc(100% - 2rem);
-  max-width: 100%;
+  position: relative;
+  width: auto;
+  transform: none;
+  z-index: auto;
+  opacity: 1;
   transition: transform 200ms ease, box-shadow 200ms ease;
-  transform:
-    translateY(calc(var(--card-index, 0) * 12px))
-    translateX(calc(var(--card-index, 0) * 4px))
-    rotate(calc(var(--card-index, 0) * 1.5deg));
-  z-index: calc(100 - var(--card-index, 0));
-  opacity: calc(1 - var(--card-index, 0) * 0.08);
 }
 .user-card:hover {
-  transform:
-    translateY(calc(var(--card-index, 0) * 12px - 4px))
-    translateX(calc(var(--card-index, 0) * 4px))
-    rotate(calc(var(--card-index, 0) * 1.5deg));
-  z-index: 200;
-}
-
-/* ── Desktop grid layout ── */
-@media (min-width: 1024px) {
-  .user-grid-container {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    min-height: auto;
-  }
-  .user-card {
-    position: relative;
-    width: auto;
-    transform: none;
-    z-index: auto;
-    opacity: 1;
-  }
-  .user-card:hover {
-    transform: none;
-    z-index: auto;
-  }
+  transform: translateY(-2px);
 }
