@@ -10,8 +10,14 @@ services:
       NODE_ENV: production
     volumes:
       - gift-guide-data:/app/data
+    networks:
+      - coolify
     restart: unless-stopped
 
 volumes:
   gift-guide-data:
     driver: local
+
+networks:
+  coolify:
+    external: true
