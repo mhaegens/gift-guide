@@ -13,13 +13,12 @@ import BottomNav from './BottomNav.vue'
 
 <style scoped>
 .has-bottom-nav {
-  padding-bottom: 72px;
+  padding-bottom: 0;
 }
 .bottom-nav {
-  position: fixed;
+  flex-shrink: 0;
+  position: sticky;
   bottom: 0;
-  left: 0;
-  right: 0;
   z-index: 40;
 }
 </style>
