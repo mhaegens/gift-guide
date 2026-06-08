@@ -3,9 +3,11 @@ services:
     build: .
     ports:
       - "3000:3000"
-    env_file: .env
     environment:
       NODE_ENV: production
     volumes:
-      - ./data:/app/data
+      - gift-guide-data:/app/data
     restart: unless-stopped
+
+volumes:
+  gift-guide-data:
