@@ -62,4 +62,10 @@ export const api = {
     unclaim: (itemId) => del(`/api/items/${itemId}/claim`),
     mine: () => get('/api/claims/mine'),
   },
+  splitsies: {
+    get: (itemId) => get(`/api/items/${itemId}/splitsies`),
+    start: (itemId, data) => post(`/api/items/${itemId}/splitsies`, data),
+    join: (itemId, data) => request('PUT', `/api/items/${itemId}/splitsies`, data),
+    leave: (itemId) => del(`/api/items/${itemId}/splitsies`),
+  },
 }

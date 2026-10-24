@@ -22,6 +22,9 @@
             <span class="badge text-xs" :class="priceBadgeClass(item.price_category)">
               {{ priceLabel(item.price_category) }}
             </span>
+            <span class="badge text-xs" :class="item.priority > 0 ? 'badge-rose' : 'badge-stone'">
+              {{ item.priority === 2 ? '★ ' : '' }}{{ priorityLabel(item.priority) }}
+            </span>
             <span v-if="!isOwnList && item.is_claimed" class="badge badge-emerald text-xs">
               Claimed ✓
             </span>
@@ -64,6 +67,8 @@
       </div>
     </div>
 
+    <SplitsiesPanel v-if="!isOwnList" :item="item" :expanded="expanded" @updated="$emit('updated', $event)" />
+
     <!-- Expanded detail -->
     <div v-if="expanded" class="border-t border-stone-100 px-3 pb-3 pt-2.5 bg-stone-50/70">
       <p v-if="item.description" class="text-sm text-stone-600 mb-2 whitespace-pre-line">{{ item.description }}</p>
@@ -91,7 +96,7 @@
         <div class="mt-3">
           <!-- Unclaimed -->
           <button
-            v-if="!item.is_claimed"
+            v-if="!item.is_claimed && !item.splitsies"
             class="btn btn-amber w-full"
             :disabled="claiming"
             @click="$emit('claim', item)"
@@ -111,7 +116,7 @@
             </button>
           </div>
           <!-- Claimed by someone else -->
-          <div v-else class="text-sm text-stone-400 font-medium flex items-center gap-1.5">
+          <div v-else-if="item.is_claimed" class="text-sm text-stone-400 font-medium flex items-center gap-1.5">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
               <circle cx="12" cy="12" r="10"/>
               <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
@@ -126,7 +131,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import { priceLabel, priceBadgeClass } from '@/utils.js'
+import { priceLabel, priceBadgeClass, priorityLabel } from '@/utils.js'
+import SplitsiesPanel from './SplitsiesPanel.vue'
 
 defineProps({
   item: { type: Object, required: true },
@@ -134,7 +140,7 @@ defineProps({
   claiming: { type: Boolean, default: false },
   unclaiming: { type: Boolean, default: false },
 })
-defineEmits(['claim', 'unclaim', 'edit', 'delete'])
+defineEmits(['claim', 'unclaim', 'edit', 'delete', 'updated'])
 
 const expanded = ref(false)
 const imgError = ref(false)

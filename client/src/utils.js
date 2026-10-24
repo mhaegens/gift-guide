@@ -1,5 +1,23 @@
 export const AVATAR_COLORS = ['#d97706', '#e11d48', '#7c3aed', '#0d9488', '#0284c7', '#16a34a']
 
+export const PRIORITIES = [
+  { value: 0, label: 'Nice to have' },
+  { value: 1, label: 'Would love' },
+  { value: 2, label: 'Top wish' },
+]
+
+export function priorityLabel(priority) {
+  return PRIORITIES.find(p => p.value === priority)?.label || 'Nice to have'
+}
+
+export function sortByPriority(items) {
+  return [...items].sort((a, b) => (b.priority || 0) - (a.priority || 0) || b.id - a.id)
+}
+
+export function formatMoney(cents) {
+  return new Intl.NumberFormat('en-BE', { style: 'currency', currency: 'EUR' }).format(cents / 100)
+}
+
 export function avatarColor(userId) {
   return AVATAR_COLORS[(userId - 1) % AVATAR_COLORS.length]
 }

@@ -32,11 +32,12 @@
         v-for="item in filteredItems"
         :key="item.id"
         :item="item"
-        :is-own-list="false"
+        :is-own-list="userId === currentUser?.id"
         :claiming="claimingId === item.id"
         :unclaiming="unclaimingId === item.id"
         @claim="claimItem"
         @unclaim="unclaimItem"
+        @updated="Object.assign(item, $event)"
       />
     </div>
   </AppLayout>
@@ -48,6 +49,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import PriceFilter from '@/components/PriceFilter.vue'
 import ItemCard from '@/components/ItemCard.vue'
+import { currentUser } from '@/stores/auth.js'
 import { api } from '@/api/index.js'
 import { avatarColor } from '@/utils.js'
 
@@ -93,9 +95,8 @@ async function claimItem(item) {
     showToast?.('Added to your purchases!')
   } catch (err) {
     if (err.status === 409) {
-      item.is_claimed = true
-      item.claimed_by_me = false
-      showToast?.('Someone just claimed this!')
+      try { Object.assign(item, await api.splitsies.get(item.id)) } catch {}
+      showToast?.(err.message)
     } else {
       showToast?.(err.message || 'Could not claim item')
     }

@@ -21,9 +21,13 @@ claimsOnItemRouter.post('/:itemId/claim', requireAuth, (req, res) => {
   if (item.owner_id === req.user.id) {
     return res.status(403).json({ error: 'You cannot claim your own items' });
   }
-
   try {
-    db.prepare('INSERT INTO claims (item_id, claimer_id) VALUES (?, ?)').run(itemId, req.user.id);
+    const claimed = db.transaction(() => {
+      if (db.prepare('SELECT 1 FROM splitsies WHERE item_id = ?').get(itemId)) return false;
+      db.prepare('INSERT INTO claims (item_id, claimer_id) VALUES (?, ?)').run(itemId, req.user.id);
+      return true;
+    }).immediate();
+    if (!claimed) return res.status(409).json({ error: 'People are going splitsies on this gift. Join their group instead.' });
   } catch (err) {
     if (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || (err.message && err.message.includes('UNIQUE'))) {
       return res.status(409).json({ error: 'This item was just claimed by someone else' });
@@ -53,16 +57,17 @@ claimsOnItemRouter.delete('/:itemId/claim', requireAuth, (req, res) => {
 // GET /api/claims/mine
 claimsMineRouter.get('/mine', requireAuth, (req, res) => {
   const claims = db.prepare(`
-    SELECT wi.*, c.claimer_id, c.claimed_at
-    FROM claims c
-    JOIN wishlist_items wi ON wi.id = c.item_id
-    WHERE c.claimer_id = ?
-    ORDER BY c.claimed_at DESC
-  `).all(req.user.id);
+    SELECT wi.*, c.claimer_id, COALESCE(c.claimed_at, sc.joined_at) AS claimed_at
+    FROM wishlist_items wi
+    LEFT JOIN claims c ON wi.id = c.item_id
+    LEFT JOIN split_contributions sc ON wi.id = sc.item_id AND sc.user_id = ?
+    WHERE wi.owner_id != ? AND (c.claimer_id = ? OR sc.user_id = ?)
+    ORDER BY claimed_at DESC
+  `).all(req.user.id, req.user.id, req.user.id, req.user.id);
 
   const grouped = {};
   for (const row of claims) {
-    const claim = { claimer_id: row.claimer_id, claimed_at: row.claimed_at };
+    const claim = row.claimer_id == null ? null : { claimer_id: row.claimer_id, claimed_at: row.claimed_at };
     const serialized = serializeItem(row, claim, req.user.id);
 
     if (!grouped[row.owner_id]) {
