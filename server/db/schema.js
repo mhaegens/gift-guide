@@ -45,6 +45,27 @@ db.exec(`
   );
 `);
 
+// Additive migration: preserve all existing wishes and claims on redeploy.
+if (!db.prepare('PRAGMA table_info(wishlist_items)').all().some(column => column.name === 'priority')) {
+  db.exec('ALTER TABLE wishlist_items ADD COLUMN priority INTEGER NOT NULL DEFAULT 0 CHECK (priority BETWEEN 0 AND 2)');
+}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS splitsies (
+    item_id INTEGER PRIMARY KEY REFERENCES wishlist_items(id) ON DELETE CASCADE,
+    starter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    target_cents INTEGER CHECK (target_cents > 0),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS split_contributions (
+    item_id INTEGER NOT NULL REFERENCES splitsies(item_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    note TEXT,
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (item_id, user_id)
+  );
+`);
+
 // When this file is run directly (npm run db:init), log confirmation
 if (require.main === module) {
   console.log('Database schema initialised at', dbPath);

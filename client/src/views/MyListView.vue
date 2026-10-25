@@ -83,6 +83,7 @@ import ItemCard from '@/components/ItemCard.vue'
 import ItemModal from '@/components/ItemModal.vue'
 import WishlistHealthPanel from '@/components/WishlistHealthPanel.vue'
 import { api } from '@/api/index.js'
+import { sortByPriority } from '@/utils.js'
 import { currentUser } from '@/stores/auth.js'
 
 const showToast = inject('showToast')
@@ -97,8 +98,9 @@ const deleting = ref(false)
 
 const totalCount = computed(() => items.value.length)
 const filteredItems = computed(() => {
-  if (priceFilter.value === 'all') return items.value
-  return items.value.filter(i => i.price_category === priceFilter.value)
+  const sorted = sortByPriority(items.value)
+  if (priceFilter.value === 'all') return sorted
+  return sorted.filter(i => i.price_category === priceFilter.value)
 })
 
 onMounted(async () => {

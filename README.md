@@ -26,15 +26,19 @@ This is the core design constraint enforced server-side, not just in the UI:
 
 The `serializeItem()` function strips claim data for owners on every API response. It cannot be bypassed client-side.
 
+Splitsies groups are visible to other family members, including the organiser, participant names, contribution amounts, and sponsorship descriptions. The wishlist owner receives **no splitsies fields**, totals, or participant details. Owners also cannot access the splitsies endpoints, even if they are an administrator. Ordinary individual claims remain anonymous.
+
 ---
 
 ## Features
 
 - **Personal wishlists** — one always-active list per family member
 - **Anonymous claim system** — prevent duplicate purchases without spoiling surprises
+- **Gift priorities** — choose Nice to have, Would love, or Top wish when adding or editing a gift; top wishes appear first
+- **Splitsies** — start a shared gift, set an optional total, pledge a euro amount and describe what you are sponsoring; others can join, edit their own pledge, or leave
 - **Budget filtering** — Free / €0–20 / €20–50 / €50–100 / €100+
 - **OG enrichment** — paste a product URL, auto-fetch title and thumbnail
-- **My Purchases view** — personal shopping checklist of all claimed items, grouped by person
+- **My Purchases view** — claims and shared gifts you are sponsoring, grouped by recipient
 - **Admin panel** — create accounts, reset passwords, manage roles, deactivate members
 - **Mobile-first UI** — designed for browsing wishlists in a shop
 
@@ -151,6 +155,8 @@ docker compose up -d --build
 
 App is running at `http://localhost:3000`. Log in with `admin` / your chosen password.
 
+Priorities and splitsies use an automatic, additive SQLite migration at startup. Keep the existing `/app/data` volume mounted on redeploy. If the organiser leaves a splitsies group, another participant becomes organiser; the group ends when its final participant leaves. Pledges cannot exceed a known gift total. Contributions are promises to sponsor; the app does not process payments.
+
 ---
 
 ## Developer Quickstart — local
@@ -171,6 +177,8 @@ To build the frontend for production (required before `npm start`):
 ```bash
 npm run build    # compiles client/ → public/
 ```
+
+Run `npm test` on Node.js 20 for migration, priority, contribution, concurrent pledge, and recipient privacy checks using a temporary database.
 
 Test the API:
 

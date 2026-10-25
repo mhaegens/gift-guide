@@ -93,6 +93,14 @@
             </div>
           </div>
 
+          <div>
+            <label class="form-label" for="gift-priority">Priority</label>
+            <select id="gift-priority" v-model="form.priority" class="form-input">
+              <option v-for="priority in PRIORITIES" :key="priority.value" :value="priority.value">{{ priority.label }}</option>
+            </select>
+            <p class="text-xs text-stone-500 mt-1">Your top wishes appear first for everyone.</p>
+          </div>
+
           <!-- Description -->
           <div>
             <label class="form-label">Description</label>
@@ -136,7 +144,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { api } from '@/api/index.js'
-import { PRICE_CHIPS } from '@/utils.js'
+import { PRICE_CHIPS, PRIORITIES } from '@/utils.js'
 
 const props = defineProps({
   show: { type: Boolean, required: true },
@@ -162,9 +170,10 @@ watch(() => props.show, (val) => {
         price_category: props.item.price_category || '',
         description: props.item.description || '',
         buyer_notes: props.item.buyer_notes || '',
+        priority: props.item.priority || 0,
       }
     } else {
-      form.value = { title: '', url: '', og_image_url: '', price_category: '0_20', description: '', buyer_notes: '' }
+      form.value = { title: '', url: '', og_image_url: '', price_category: '0_20', description: '', buyer_notes: '', priority: 0 }
     }
   }
 })
@@ -210,6 +219,7 @@ async function save() {
       price_category: form.value.price_category,
       description: form.value.description || null,
       buyer_notes: form.value.buyer_notes || null,
+      priority: form.value.priority,
     }
 
     if (props.item) {

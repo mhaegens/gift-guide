@@ -4,6 +4,7 @@ const express = require('express');
 const db = require('../db/schema');
 const requireAuth = require('../middleware/requireAuth');
 const ogEnricher = require('../services/ogEnricher');
+const { getSplitsies } = require('../services/splitsies');
 
 // userRouter is mounted at /api/users
 const userRouter = express.Router();
@@ -21,6 +22,7 @@ function serializeItem(item, claim, requesterId) {
     og_image_url: item.og_image_url,
     buyer_notes: item.buyer_notes,
     price_category: item.price_category,
+    priority: item.priority,
     created_at: item.created_at,
   };
 
@@ -32,6 +34,7 @@ function serializeItem(item, claim, requesterId) {
     ...base,
     is_claimed: claim !== null,
     claimed_by_me: claim != null ? claim.claimer_id === requesterId : false,
+    splitsies: getSplitsies(item.id, requesterId),
     // claimer identity is NEVER included
   };
 }
@@ -46,7 +49,7 @@ userRouter.get('/:id/items', requireAuth, (req, res) => {
   }
 
   const items = db.prepare(`
-    SELECT * FROM wishlist_items WHERE owner_id = ? ORDER BY created_at DESC
+    SELECT * FROM wishlist_items WHERE owner_id = ? ORDER BY priority DESC, created_at DESC, id DESC
   `).all(ownerId);
 
   const serialized = items.map(item => {
@@ -59,7 +62,7 @@ userRouter.get('/:id/items', requireAuth, (req, res) => {
 
 // POST /api/users/me/items
 userRouter.post('/me/items', requireAuth, (req, res) => {
-  const { title, description, url, og_image_url, buyer_notes, price_category } = req.body || {};
+  const { title, description, url, og_image_url, buyer_notes, price_category, priority = 0 } = req.body || {};
 
   if (!title) {
     return res.status(422).json({ error: 'title is required' });
@@ -68,10 +71,13 @@ userRouter.post('/me/items', requireAuth, (req, res) => {
     return res.status(422).json({ error: `price_category must be one of: ${VALID_PRICE_CATEGORIES.join(', ')}` });
   }
 
+  if (!Number.isInteger(priority) || priority < 0 || priority > 2) {
+    return res.status(422).json({ error: 'priority must be 0, 1 or 2' });
+  }
   const result = db.prepare(`
-    INSERT INTO wishlist_items (owner_id, title, description, url, og_image_url, buyer_notes, price_category)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(req.user.id, title, description || null, url || null, og_image_url || null, buyer_notes || null, price_category);
+    INSERT INTO wishlist_items (owner_id, title, description, url, og_image_url, buyer_notes, price_category, priority)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(req.user.id, title, description || null, url || null, og_image_url || null, buyer_notes || null, price_category, priority);
 
   const item = db.prepare('SELECT * FROM wishlist_items WHERE id = ?').get(result.lastInsertRowid);
 
@@ -104,7 +110,7 @@ userRouter.patch('/me/items/:itemId', requireAuth, (req, res) => {
     return res.status(403).json({ error: 'Not allowed' });
   }
 
-  const { title, description, url, og_image_url, buyer_notes, price_category } = req.body || {};
+  const { title, description, url, og_image_url, buyer_notes, price_category, priority } = req.body || {};
   const updates = {};
 
   if (title !== undefined) updates.title = title;
@@ -112,6 +118,12 @@ userRouter.patch('/me/items/:itemId', requireAuth, (req, res) => {
   if (url !== undefined) updates.url = url;
   if (og_image_url !== undefined) updates.og_image_url = og_image_url || null;
   if (buyer_notes !== undefined) updates.buyer_notes = buyer_notes;
+  if (priority !== undefined) {
+    if (!Number.isInteger(priority) || priority < 0 || priority > 2) {
+      return res.status(422).json({ error: 'priority must be 0, 1 or 2' });
+    }
+    updates.priority = priority;
+  }
   if (price_category !== undefined) {
     if (!VALID_PRICE_CATEGORIES.includes(price_category)) {
       return res.status(422).json({ error: `price_category must be one of: ${VALID_PRICE_CATEGORIES.join(', ')}` });

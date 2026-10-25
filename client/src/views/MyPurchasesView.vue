@@ -2,7 +2,7 @@
   <AppLayout>
     <div class="px-4 pt-6 pb-2">
       <h2 class="font-bold text-xl text-stone-800">My Purchases</h2>
-      <p class="text-sm text-stone-500">Items you've committed to buying</p>
+      <p class="text-sm text-stone-500">Gifts you're buying or sponsoring together</p>
     </div>
 
     <div class="px-4 space-y-4 pb-4">
@@ -23,28 +23,14 @@
           {{ group.owner.display_name }}'s list
         </div>
         <div class="space-y-2">
-          <div
+          <ItemCard
             v-for="item in group.items"
             :key="item.id"
-            class="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3"
-          >
-            <div class="flex-1 min-w-0">
-              <p class="font-semibold text-stone-800 text-sm truncate">{{ item.title }}</p>
-              <div class="flex items-center gap-2 mt-1 flex-wrap">
-                <span class="badge text-xs" :class="priceBadgeClass(item.price_category)">
-                  {{ priceLabel(item.price_category) }}
-                </span>
-              </div>
-            </div>
-            <button
-              class="btn btn-outline text-xs px-3 flex-shrink-0"
-              style="min-height:36px;"
-              :disabled="unclaimingId === item.id"
-              @click="unclaim(item, group)"
-            >
-              {{ unclaimingId === item.id ? '…' : 'Unclaim' }}
-            </button>
-          </div>
+            :item="item"
+            :unclaiming="unclaimingId === item.id"
+            @unclaim="unclaim(item, group)"
+            @updated="onUpdated($event, group)"
+          />
         </div>
       </div>
     </div>
@@ -54,8 +40,9 @@
 <script setup>
 import { ref, onMounted, inject } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
+import ItemCard from '@/components/ItemCard.vue'
 import { api } from '@/api/index.js'
-import { avatarColor, priceLabel, priceBadgeClass } from '@/utils.js'
+import { avatarColor } from '@/utils.js'
 
 const showToast = inject('showToast')
 
@@ -92,6 +79,16 @@ async function unclaim(item, group) {
     showToast?.(err.message || 'Could not unclaim')
   } finally {
     unclaimingId.value = null
+  }
+}
+
+function onUpdated(updated, group) {
+  if (!updated.claimed_by_me && !updated.splitsies?.participants.some(p => p.is_me)) {
+    group.items = group.items.filter(i => i.id !== updated.id)
+    if (group.items.length === 0) groups.value = groups.value.filter(g => g.owner.id !== group.owner.id)
+  } else {
+    const index = group.items.findIndex(i => i.id === updated.id)
+    if (index !== -1) group.items[index] = updated
   }
 }
 </script>

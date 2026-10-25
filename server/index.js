@@ -16,6 +16,7 @@ const usersRouter = require('./routes/users');
 const { userRouter: itemsUserRouter, itemRouter: itemsItemRouter } = require('./routes/items');
 const { claimsOnItemRouter, claimsMineRouter } = require('./routes/claims');
 const statsRouter = require('./routes/stats');
+const splitsiesRouter = require('./routes/splitsies');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -44,6 +45,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/users', itemsUserRouter);   // GET /api/users/:id/items, POST/PATCH/DELETE /api/users/me/items
 app.use('/api/items', itemsItemRouter);   // POST /api/items/enrich
 app.use('/api/items', claimsOnItemRouter); // POST/DELETE /api/items/:itemId/claim
+app.use('/api/items', splitsiesRouter);
 app.use('/api/claims', claimsMineRouter);  // GET /api/claims/mine
 
 // Serve Phase 3 Vue frontend from /public (when built)
