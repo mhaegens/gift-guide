@@ -34,6 +34,9 @@ const patch = (path, body) => request('PATCH', path, body)
 const del = (path) => request('DELETE', path)
 
 export const api = {
+  admin: {
+    stats: () => get('/api/admin/stats'),
+  },
   auth: {
     login: (username, password) => post('/api/auth/login', { username, password }),
     logout: () => post('/api/auth/logout'),

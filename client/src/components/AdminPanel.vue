@@ -19,6 +19,22 @@
       </div>
 
       <div class="px-4 pt-4 pb-6">
+        <section aria-label="Gift overview" class="mb-6">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <h3 class="font-semibold text-stone-800">Gift overview</h3>
+            <button class="btn btn-ghost text-xs px-3" :disabled="statsLoading" @click="loadStats">{{ statsLoading ? 'Refreshing…' : 'Refresh counts' }}</button>
+          </div>
+          <p v-if="statsError" role="alert" class="text-sm text-red-600 mb-3">{{ statsError }}</p>
+          <div v-if="stats" class="grid grid-cols-2 gap-3" aria-live="polite" :aria-busy="statsLoading">
+            <div v-for="card in statCards" :key="card.key" class="bg-white rounded-xl p-4 shadow-sm">
+              <p class="text-xs text-stone-500">{{ card.label }}</p>
+              <p class="text-2xl font-bold text-stone-800 mt-1">{{ stats[card.key] }}</p>
+            </div>
+          </div>
+          <p v-else-if="statsLoading" class="text-sm text-stone-500">Loading gift counts…</p>
+          <p class="text-xs text-stone-500 mt-3">Claimed gifts and active splitsies groups are counted separately. Available gifts have neither. Totals keep individual surprises hidden.</p>
+        </section>
+
         <div class="flex justify-between items-center mb-4">
           <p class="text-sm text-stone-500">Manage family accounts</p>
           <button class="btn btn-amber px-4" @click="showAddUser = true">+ Add user</button>
@@ -125,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { api } from '@/api/index.js'
 import { avatarColor, avatarInitial } from '@/utils.js'
 
@@ -144,14 +160,36 @@ const resettingPw = ref(false)
 const animClass = ref('entering')
 const closing = ref(false)
 const loadError = ref('')
+const stats = ref(null)
+const statsLoading = ref(false)
+const statsError = ref('')
+const statCards = [
+  { key: 'gifts', label: 'Gifts' },
+  { key: 'claims', label: 'Claimed gifts' },
+  { key: 'splitsies', label: 'Splitsies groups' },
+  { key: 'available', label: 'Available gifts' },
+]
 
 watch(() => props.show, async (val) => {
   if (val) {
     animClass.value = 'entering'
     closing.value = false
-    await loadUsers()
+    await Promise.all([loadUsers(), loadStats()])
   }
-})
+}, { immediate: true })
+
+async function loadStats() {
+  statsLoading.value = true
+  statsError.value = ''
+  try {
+    stats.value = await api.admin.stats()
+  } catch (err) {
+    stats.value = null
+    statsError.value = err.message || 'Failed to load gift counts'
+  } finally {
+    statsLoading.value = false
+  }
+}
 
 async function loadUsers() {
   loadError.value = ''

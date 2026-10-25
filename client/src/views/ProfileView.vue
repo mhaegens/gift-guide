@@ -53,8 +53,8 @@
           <h3 class="font-semibold text-amber-800">Admin</h3>
           <span class="badge badge-amber">Admin</span>
         </div>
-        <p class="text-sm text-amber-700 mb-3">Manage family accounts, reset passwords, and assign admin roles.</p>
-        <button class="btn btn-amber w-full" @click="showAdmin = true">Manage users →</button>
+        <p class="text-sm text-amber-700 mb-3">View gift counts, manage family accounts, reset passwords, and assign admin roles.</p>
+        <button class="btn btn-amber w-full" @click="showAdmin = true">Open admin panel →</button>
       </div>
 
       <!-- Logout -->

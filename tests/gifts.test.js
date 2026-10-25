@@ -13,7 +13,7 @@ process.env.DB_PATH = path.join(folder, 'gifts.db');
 // A database from before priorities and splitsies existed.
 const legacy = new Database(process.env.DB_PATH);
 legacy.exec(`
-  CREATE TABLE users (id INTEGER PRIMARY KEY, display_name TEXT, is_active INTEGER DEFAULT 1);
+  CREATE TABLE users (id INTEGER PRIMARY KEY, display_name TEXT, is_active INTEGER DEFAULT 1, is_admin INTEGER DEFAULT 0);
   INSERT INTO users (id, display_name) VALUES (1, 'Recipient'), (2, 'Michiel'), (3, 'Alice'), (4, 'Bob');
   CREATE TABLE wishlist_items (
     id INTEGER PRIMARY KEY, owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -32,6 +32,7 @@ const db = require('../server/db/schema');
 const { userRouter, itemRouter } = require('../server/routes/items');
 const { claimsOnItemRouter, claimsMineRouter } = require('../server/routes/claims');
 const splitsiesRouter = require('../server/routes/splitsies');
+const adminRouter = require('../server/routes/admin');
 const app = express();
 app.use(express.json());
 // Test harness authenticates users while exercising the real authorization middleware.
@@ -39,6 +40,7 @@ app.use((req, res, next) => { req.session = { userId: Number(req.headers['x-test
 app.use('/api/users', userRouter);
 app.use('/api/items', itemRouter, claimsOnItemRouter, splitsiesRouter);
 app.use('/api/claims', claimsMineRouter);
+app.use('/api/admin', adminRouter);
 let server;
 let base;
 before(async () => {
@@ -178,4 +180,23 @@ test('a simultaneous claim and splitsies start reserve the gift only once', asyn
   const claims = db.prepare('SELECT COUNT(*) AS n FROM claims WHERE item_id = ?').get(item.id).n;
   const groups = db.prepare('SELECT COUNT(*) AS n FROM splitsies WHERE item_id = ?').get(item.id).n;
   assert.equal(claims + groups, 1);
+});
+
+test('admin overview counts gifts, claims and splitsies without exposing identities', async () => {
+  assert.equal((await call(0, 'GET', '/api/admin/stats')).status, 401);
+  assert.equal((await call(1, 'GET', '/api/admin/stats')).status, 403);
+  db.prepare('UPDATE users SET is_admin = 1 WHERE id = 2').run();
+  db.prepare('DELETE FROM wishlist_items').run();
+  await create();
+  const claimed = await create();
+  const shared = await create();
+  assert.equal((await call(3, 'POST', `/api/items/${claimed.id}/claim`)).status, 201);
+  assert.equal((await call(4, 'POST', `/api/items/${shared.id}/splitsies`, { amount: '10', target: '50' })).status, 201);
+  const result = await call(2, 'GET', '/api/admin/stats');
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, { gifts: 3, claims: 1, splitsies: 1, available: 1 });
+  assert.equal((await call(4, 'PUT', `/api/items/${shared.id}/splitsies`, { amount: '50' })).status, 200);
+  assert.deepEqual((await call(2, 'GET', '/api/admin/stats')).body, result.body);
+  assert.equal((await call(4, 'DELETE', `/api/items/${shared.id}/splitsies`)).status, 200);
+  assert.deepEqual((await call(2, 'GET', '/api/admin/stats')).body, { gifts: 3, claims: 1, splitsies: 0, available: 2 });
 });

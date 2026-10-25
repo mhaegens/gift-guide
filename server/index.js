@@ -17,6 +17,7 @@ const { userRouter: itemsUserRouter, itemRouter: itemsItemRouter } = require('./
 const { claimsOnItemRouter, claimsMineRouter } = require('./routes/claims');
 const statsRouter = require('./routes/stats');
 const splitsiesRouter = require('./routes/splitsies');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -41,6 +42,7 @@ app.use(session({
 // API routes
 app.use('/api/auth', authRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/admin', adminRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/users', itemsUserRouter);   // GET /api/users/:id/items, POST/PATCH/DELETE /api/users/me/items
 app.use('/api/items', itemsItemRouter);   // POST /api/items/enrich
