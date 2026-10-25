@@ -39,7 +39,7 @@ Splitsies groups are visible to other family members, including the organiser, p
 - **Budget filtering** — Free / €0–20 / €20–50 / €50–100 / €100+
 - **OG enrichment** — paste a product URL, auto-fetch title and thumbnail
 - **My Purchases view** — claims and shared gifts you are sponsoring, grouped by recipient
-- **Admin panel** — create accounts, reset passwords, manage roles, deactivate members
+- **Admin panel** — view total gifts, claims, active splitsies groups and available gifts; create accounts, reset passwords, manage roles, deactivate members
 - **Mobile-first UI** — designed for browsing wishlists in a shop
 
 ---
